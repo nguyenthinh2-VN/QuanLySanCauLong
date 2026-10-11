@@ -1,10 +1,10 @@
 package com.badminton.config;
 
-import com.badminton.common.enums.RoleType;
-import com.badminton.entity.Role;
-import com.badminton.entity.User;
-import com.badminton.repository.RoleRepository;
-import com.badminton.repository.UserRepository;
+import com.badminton.modules.auth.entity.Role;
+import com.badminton.modules.auth.entity.User;
+import com.badminton.modules.auth.repository.RoleRepository;
+import com.badminton.modules.auth.repository.UserRepository;
+import com.badminton.shared.constant.RoleType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;

@@ -1,6 +1,10 @@
 server:
   port: 8080
 
+app:
+  frontend-url: ${APP_FRONTEND_URL:http://localhost:3000}
+  reset-password-url: ${APP_RESET_PASSWORD_URL:http://localhost:3000/reset-password}
+
 spring:
   application:
     name: badminton-court-management

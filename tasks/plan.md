@@ -1,98 +1,86 @@
-# Implementation Plan: Web Quản Lý Sân Cầu Lông (Backend)
+# Architecture & Implementation Plan: Refactoring sang Package-by-Feature (Modular Monolith)
 
 ## 1. Overview
-Hệ thống backend cho nền tảng "Web Quản Lý Sân Cầu Lông" xây dựng bằng Java Spring Boot, phục vụ portfolio tuyển dụng Senior-standard cho vị trí Fresher/Junior.
-Hệ thống giải quyết trọn vẹn bài toán vận hành sân cầu lông: quản lý tài khoản & phân quyền (RBAC), quản lý sân bãi & khung giờ định giá linh hoạt, đặt sân lẻ/đặt lịch cố định hàng tuần với cơ chế chống xung đột (concurrency/double-booking), thanh toán giả lập, voucher khuyến mãi và báo cáo thống kê doanh thu/tỉ lệ lấp đầy sân bằng JPQL projection hiệu năng cao.
+Tái cấu trúc thư mục từ mô hình kỹ thuật cũ (**Package-by-Layer**) sang mô hình hướng nghiệp vụ (**Package-by-Feature / Modular Architecture kết hợp Shared Kernel**).
+Mục tiêu giải quyết triệt để vấn đề "thư mục phình to vô tận" và "nhảy file phân tán (low cohesion)" khi phát triển 9 modules của dự án "Web quản lý sân cầu lông", đồng thời thể hiện tư duy thiết kế phần mềm hiện đại (Screaming Architecture & Microservices-ready) cho portfolio tuyển dụng.
 
 ---
 
-## 2. Architecture & Design Principles
+## 2. Cấu Trúc Thư Mục Mục Tiêu (Target Architecture)
 
-### 2.1. Cấu trúc thư mục Layered Architecture (`com.badminton`)
 ```
 com.badminton
-├── config/             # Cấu hình Spring (SecurityConfig, OpenApiConfig, CorsConfig, ...)
-├── controller/         # REST Controllers (chỉ nhận DTO request, gọi Service, trả ApiResponse<DTO>)
-├── service/            # Service Interfaces & Implementations (chứa toàn bộ nghiệp vụ)
-│   └── impl/
-├── repository/         # Spring Data JPA Repositories
-├── entity/             # JPA Entities (không bao giờ lộ ra ngoài API)
-├── dto/                # Request & Response Data Transfer Objects (Validation annotations)
-│   ├── request/
-│   └── response/
-├── mapper/             # MapStruct mappers (chuyển đổi Entity <-> DTO không boilerplate)
-├── security/           # JWT, UserDetails, JwtAuthenticationFilter, SecurityUtils
-├── exception/          # GlobalExceptionHandler, Custom Business Exceptions, Error Codes
-└── common/             # ApiResponse wrapper, Constant, Enums, BaseEntity, PageResponse
+├── shared/                                 # Hạ tầng dùng chung toàn hệ thống
+│   ├── response/                           # ApiResponse, PageResponse
+│   ├── entity/                             # BaseEntity
+│   ├── exception/                          # ErrorCode, AppException, ResourceNotFoundException, GlobalExceptionHandler
+│   ├── constant/                           # RoleConstants, RoleType, NotificationChannel, NotificationType
+│   └── config/                             # OpenApiConfig, MapperConfig, CorsConfig
+│
+├── security/                               # Hệ thống bảo mật độc lập
+│   ├── jwt/                                # JwtTokenProvider, JwtAuthenticationFilter, JwtAuthenticationEntryPoint, CustomAccessDeniedHandler
+│   ├── userdetails/                        # CustomUserDetails, CustomUserDetailsService
+│   └── SecurityConfig.java                 # Cấu hình SecurityFilterChain & Method Security
+│
+├── notification/                           # Hệ thống gửi thông báo đa kênh (Strategy Pattern)
+│   ├── dto/                                # NotificationMessage
+│   ├── NotificationSender.java             # Interface Strategy
+│   ├── NotificationService.java            # Interface Dispatcher
+│   └── impl/                               # ConsoleEmailNotificationSender, ConsoleSmsNotificationSender, NotificationServiceImpl
+│
+├── modules/                                # CÁC FEATURE / DOMAIN NGHIỆP VỤ ĐỘC LẬP
+│   └── auth/                               # [Module 1 & 2] Authentication, Users & RBAC
+│       ├── entity/                         # User, Role, RefreshToken, PasswordResetToken
+│       ├── repository/                     # UserRepository, RoleRepository, RefreshTokenRepository, PasswordResetTokenRepository
+│       ├── dto/                            # RegisterRequest, LoginRequest, RefreshTokenRequest, AuthResponse, UserResponse...
+│       ├── mapper/                         # UserMapper, UserMapperFallbackImpl
+│       ├── service/                        # AuthService, AuthServiceImpl
+│       └── AuthController.java             # REST API Controller
+│   │
+│   ├── court/                              # [Module 3] Cụm sân, Sân con, Khung giờ, Bảng giá
+│   ├── booking/                            # [Module 4 & 5] Đặt sân, Check slot trùng, Lịch cố định
+│   ├── payment/                            # [Module 6] Thanh toán giả lập, Đặt cọc, Hoàn tiền
+│   ├── voucher/                            # [Module 7] Khuyến mãi & Áp mã
+│   └── dashboard/                          # [Module 8] Báo cáo doanh thu & Tỉ lệ lấp đầy
+│
+├── config/
+│   └── DataSeeder.java                     # Seed dữ liệu mẫu (Roles, Admin mặc định)
+└── QuanLySanCauLongApplication.java        # Class khởi động Spring Boot
 ```
 
-### 2.2. Các quyết định thiết kế cốt lõi (Core Decisions)
-1. **RBAC chặt chẽ (Method-Level Security)**:
-   - Lưu trữ roles (`ADMIN`, `STAFF`, `CUSTOMER`) dạng bảng `roles` với liên kết Many-to-Many thông qua `user_roles`.
-   - Sử dụng `@EnableMethodSecurity` và `@PreAuthorize("hasRole(T(com.badminton.common.enums.RoleType).ADMIN.name())")` hoặc Custom SpEL Constants để tránh hardcode String.
-2. **Quản lý Token (Access Token & Refresh Token)**:
-   - Access Token ngắn hạn (ví dụ: 15-30 phút), Refresh Token dài hạn (ví dụ: 7 ngày) được lưu database để hỗ trợ revoke/logout tức thì (Rotation & Revocation).
-3. **Chuẩn hóa API Response**:
-   - Thành công: `ApiResponse<T>` với format `{ "success": true, "message": "...", "data": ... }`.
-   - Thất bại: `ApiResponse<Void>` với format `{ "success": false, "code": "...", "message": "...", "timestamp": ... }`.
-4. **Phân trang chuẩn REST**:
-   - Sử dụng `Pageable` của Spring Data, chuyển đổi thành `PageResponse<T>` gồm `content`, `pageNo`, `pageSize`, `totalElements`, `totalPages`, `isLast`.
+---
+
+## 3. Các Quyết Định Thiết Kế Cốt Lõi (Architecture Decisions)
+
+1. **Shared Kernel (`com.badminton.shared`)**:
+   - Chứa các class bất biến dùng chung cho tất cả các modules: `ApiResponse`, `BaseEntity`, `GlobalExceptionHandler`, các constant/enum toàn cục.
+   - Tránh việc sao chép code giữa các module.
+2. **Security & Notification Tách Riêng (Cross-Cutting Concerns)**:
+   - `security`: Chịu trách nhiệm bảo vệ toàn bộ gateway của hệ thống, không bị trói buộc vào riêng module nào.
+   - `notification`: Chịu trách nhiệm dispatch email/sms/push theo Strategy Pattern, được gọi bởi bất kỳ module nào (`auth`, `booking`, `payment`).
+3. **Module Hoá Cao Độ (High Cohesion trong `modules/`)**:
+   - Khi phát triển Module 3 (Sân) hay Module 4 (Đặt sân), toàn bộ Controller, Service, Repository, Entity, DTO chỉ nằm trong đúng folder của module đó.
+   - Giảm thiểu tối đa xung đột git khi làm việc nhóm và cực kỳ dễ hiểu đối với bất kỳ AI hay developer nào đọc codebase.
 
 ---
 
-## 3. Lộ trình triển khai 9 Modules
+## 4. Kế Hoạch Triển Khai Chi Tiết (Implementation Phases)
 
-- [ ] **Module 1: Auth & RBAC (Current Scope)**
-  - Đăng ký, đăng nhập JWT + Refresh token rotation
-  - Đăng xuất (thu hồi refresh token)
-  - Quên mật khẩu & đặt lại mật khẩu (giả lập token, log console)
-  - Thông tin cá nhân (`/api/v1/auth/me`)
-- [ ] **Module 2: Quản lý Users & Gán Role (Admin only)**
-  - Quản lý danh sách người dùng, tìm kiếm, phân trang
-  - Khóa/mở khóa tài khoản
-  - Gán role cho user (ADMIN, STAFF, CUSTOMER)
-- [ ] **Module 3: Quản lý Cụm Sân, Sân Con & Bảng Giá Khung Giờ**
-  - Cụm sân (Court Complex/Center), sân con (Court)
-  - Khung giờ hoạt động (TimeSlots), định giá linh hoạt (giờ vàng/cao điểm, cuối tuần)
-- [ ] **Module 4: Xem Lịch Trống, Đặt Sân & Xử Lý Concurrency**
-  - Xem slot trống theo ngày/sân
-  - Đặt sân chống double-booking (Pessimistic Locking / Transaction isolation)
-  - Hủy/đổi lịch theo điều kiện (trước X giờ)
-- [ ] **Module 5: Đặt Lịch Cố Định Hàng Tuần (Recurring Booking)**
-  - Đặt theo chu kỳ tuần (ví dụ: Thứ 3 & Thứ 5 hàng tuần trong 1 tháng)
-  - Batch checking slot trống
-- [ ] **Module 6: Thanh Toán Giả Lập & Đặt Cọc**
-  - Workflow: PENDING → PAID / CANCELLED / EXPIRED
-  - Đặt cọc theo % giá trị đơn, hoàn tiền khi hủy đúng quy định
-- [ ] **Module 7: Voucher & Khuyến Mãi**
-  - CRUD voucher, điều kiện áp dụng (giá trị đơn tối thiểu, số lượng giới hạn, hạn dùng)
-  - Áp dụng voucher khi tạo đơn đặt sân
-- [ ] **Module 8: Dashboard & Báo Cáo Thống Kê**
-  - Doanh thu theo ngày/tuần/tháng
-  - Tỉ lệ lấp đầy sân (Court Occupancy Rate)
-  - Tối ưu hóa bằng JPQL Constructor Expressions & DTO Projections
-- [ ] **Module 9: Seeding Data, Docker & Swagger Documentation**
-  - Flyway migration hoặc CommandLineRunner seed data (roles, admin mặc định, sân mẫu)
-  - `docker-compose.yml` (App + Database)
-  - Swagger UI / OpenAPI 3 tài liệu hóa toàn bộ endpoint
+### Phase 1: Chuẩn Bị Hạ Tầng Dùng Chung (`shared/`)
+- Tạo package `com.badminton.shared` và di chuyển `ApiResponse`, `BaseEntity`, `ErrorCode`, `AppException`, `GlobalExceptionHandler`, `RoleConstants`, `RoleType`, `NotificationChannel`, `NotificationType`, `OpenApiConfig`, `MapperConfig`.
 
----
+### Phase 2: Tách Biệt Phân Hệ `security` và `notification`
+- Di chuyển toàn bộ các class JWT, UserDetails, SecurityConfig vào `com.badminton.security`.
+- Di chuyển `NotificationService`, `NotificationSender`, `NotificationMessage` vào `com.badminton.notification`.
 
-## 4. Chi tiết triển khai Module 1: Auth + RBAC
+### Phase 3: Gom Nhóm Module 1 Vào `modules/auth`
+- Tạo package `com.badminton.modules.auth`.
+- Di chuyển Entity (`User`, `Role`, `RefreshToken`, `PasswordResetToken`), Repository, DTO, Mapper, Service, Controller của Auth vào đây.
+- Xóa các folder tầng cũ đã rỗng (`controller/`, `dto/`, `entity/`, `repository/`, `service/`, `mapper/`, `common/`).
 
-### Sơ đồ luồng (Flow)
-1. **Register**: `RegisterRequest` -> validate (email unique, password format, phone) -> mã hóa Password bằng `BCryptPasswordEncoder` -> gán role mặc định `CUSTOMER` -> lưu DB.
-2. **Login**: `LoginRequest` -> `AuthenticationManager.authenticate()` -> Sinh Access Token & Refresh Token -> Lưu Refresh Token vào bảng `refresh_tokens` -> Trả về `AuthResponse`.
-3. **Refresh Token**: Client gửi `RefreshTokenRequest` -> Kiểm tra token có trong DB, chưa hết hạn, chưa bị revoke -> Cấp Access Token mới (kèm refresh token rotation).
-4. **Logout**: Client gọi logout -> Thu hồi (revoke/xóa) Refresh Token trong DB -> Trả về message thành công.
-5. **Forgot Password**: Nhận email -> Tạo reset token có thời hạn (15 phút) -> Lưu DB hoặc cache -> Log link reset ra console -> User gọi endpoint reset password với token và mật khẩu mới.
+### Phase 4: Đồng Bộ Test, Seeder & Kiểm Thử
+- Cập nhật import trong `AuthServiceTest` và `DataSeeder`.
+- Chạy `mvn clean test` xác thực 100% tests pass và biên dịch thành công.
 
----
-
-## 5. Rủi ro & Giải pháp (Risks & Mitigations)
-
-| Rủi ro | Mức độ | Giải pháp |
-|---|---|---|
-| Xung đột version thư viện trong Spring Boot | Cao | Dùng Spring Boot 3.3.x/3.4.x chính thức, quản lý version chuẩn qua dependency management. |
-| Rò rỉ thông tin nhạy cảm qua JWT | Trung bình | Chỉ lưu subject (username/email), user ID, roles trong Claims; không lưu mật khẩu hay dữ liệu nhạy cảm. |
-| Xung đột token khi login đa thiết bị | Thấp | Bảng `refresh_tokens` liên kết với `User` (1-n) giúp quản lý theo từng phiên đăng nhập hoặc thu hồi toàn bộ. |
+### Phase 5: Cập Nhật Tài Liệu
+- Cập nhật `README.md`, `docs/architecture/architecture-and-rbac.md`, `docs/architecture/modules/module-1-auth.md` phản ánh cấu trúc thư mục mới.

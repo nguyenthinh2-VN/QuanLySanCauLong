@@ -1,131 +1,41 @@
-# Tasks Checklist: Module 1 - Authentication & RBAC
+# Tasks Checklist: Refactor Codebase sang Package-by-Feature
 
-## Task 1: Setup Dependencies, Application Configuration & Base Classes
-**Description:** Cấu hình file `pom.xml` bổ sung các starter cần thiết (Web, Data JPA, Security, Validation, MySQL Driver, MapStruct, JJWT, SpringDoc OpenAPI), cấu hình `application.yml`, đổi tên package chính thành `com.badminton`, tạo các lớp cơ sở dùng chung (`ApiResponse`, `BaseEntity`, `ErrorCode`, `RoleConstants`, `RoleType` enum).
+## Task 1: Migrate Shared Kernel Infrastructure
+**Description:** Tạo cấu trúc thư mục `com.badminton.shared` và di chuyển các thành phần dùng chung toàn hệ thống bao gồm: Response (`ApiResponse`), Entity (`BaseEntity`), Exception (`ErrorCode`, `AppException`, `ResourceNotFoundException`, `BadRequestException`, `GlobalExceptionHandler`), Constants & Enums (`RoleConstants`, `RoleType`, `NotificationChannel`, `NotificationType`), Configurations (`OpenApiConfig`, `MapperConfig`).
 
 **Acceptance criteria:**
-- [x] File `pom.xml` bao gồm đầy đủ dependencies cho Spring Boot Web, Data JPA, Security, Validation, MySQL Driver, MapStruct 1.5.5+, JJWT 0.12.x, SpringDoc OpenAPI v2.
-- [x] Root package được đồng nhất là `com.badminton`.
-- [x] Lớp `ApiResponse<T>` chuẩn hóa response theo đúng yêu cầu `{ "success": boolean, "message": string, "data": ... }`.
-- [x] Enum `RoleType` gồm `ROLE_ADMIN`, `ROLE_STAFF`, `ROLE_CUSTOMER`.
-- [x] Dự án biên dịch thành công (`mvn clean compile`).
+- [x] Thư mục `com.badminton.shared` được tạo với các package con: `response`, `entity`, `exception`, `constant`, `config`.
+- [x] Tất cả package declaration và import của các file dùng chung được cập nhật chuẩn xác.
+- [x] Các lớp dùng chung không còn nằm phân tán trong `common/`, `exception/`, `config/`.
 
 **Verification:**
-- [x] Build succeeds: `.\mvnw.cmd clean compile`
+- [x] Build succeeds: `.\mvnw.cmd compile`
 
 **Dependencies:** None
 
 **Files likely touched:**
-- `pom.xml`
-- `src/main/resources/application.yml`
-- `src/main/java/com/badminton/QuanLySanCauLongApplication.java`
-- `src/main/java/com/badminton/common/ApiResponse.java`
-- `src/main/java/com/badminton/common/BaseEntity.java`
-- `src/main/java/com/badminton/common/enums/RoleType.java`
-- `src/main/java/com/badminton/exception/ErrorCode.java`
+- `src/main/java/com/badminton/shared/response/ApiResponse.java`
+- `src/main/java/com/badminton/shared/entity/BaseEntity.java`
+- `src/main/java/com/badminton/shared/constant/RoleConstants.java`
+- `src/main/java/com/badminton/shared/constant/RoleType.java`
+- `src/main/java/com/badminton/shared/constant/NotificationChannel.java`
+- `src/main/java/com/badminton/shared/constant/NotificationType.java`
+- `src/main/java/com/badminton/shared/exception/ErrorCode.java`
+- `src/main/java/com/badminton/shared/exception/AppException.java`
+- `src/main/java/com/badminton/shared/exception/GlobalExceptionHandler.java`
+- `src/main/java/com/badminton/shared/config/OpenApiConfig.java`
 
-**Estimated scope:** Medium: 5-7 files
+**Estimated scope:** Medium: 10 files
 
 ---
 
-## Task 2: Implement Entities & Repositories for User, Role, and RefreshToken
-**Description:** Tạo các entity JPA mô hình hóa người dùng (`User`), vai trò (`Role`), liên kết nhiều-nhiều (`user_roles`), `RefreshToken` (lưu token refresh và trạng thái revoke), và `PasswordResetToken` (phục vụ chức năng quên mật khẩu). Tạo các Spring Data JPA repository tương ứng.
+## Task 2: Reorganize Security Subsystem
+**Description:** Tổ chức lại hệ thống Security độc lập dưới `com.badminton.security`, chia thành các package con chuyên biệt: `jwt/` (JwtTokenProvider, JwtAuthenticationFilter, JwtAuthenticationEntryPoint, CustomAccessDeniedHandler), `userdetails/` (CustomUserDetails, CustomUserDetailsService), và `SecurityConfig.java` tại gốc security.
 
 **Acceptance criteria:**
-- [x] Entity `Role` ánh xạ bảng `roles`, có `RoleType name` (unique, nullable=false).
-- [x] Entity `User` ánh xạ bảng `users`, có `email` (unique), `phone` (unique), `password`, `fullName`, `active` (boolean), quan hệ `@ManyToMany` với `Role`.
-- [x] Entity `RefreshToken` ánh xạ bảng `refresh_tokens`, lưu token chuỗi UUID/JWT, expiryDate, revoked (boolean), quan hệ `@ManyToOne` với `User`.
-- [x] Entity `PasswordResetToken` lưu mã/token đặt lại mật khẩu với thời hạn hết hạn.
-- [x] Các repository `UserRepository`, `RoleRepository`, `RefreshTokenRepository`, `PasswordResetTokenRepository` hỗ trợ các query nghiệp vụ cần thiết (tìm theo email, phone, token).
-
-**Verification:**
-- [x] Build succeeds: `.\mvnw.cmd test-compile`
-
-**Dependencies:** Task 1
-
-**Files likely touched:**
-- `src/main/java/com/badminton/entity/User.java`
-- `src/main/java/com/badminton/entity/Role.java`
-- `src/main/java/com/badminton/entity/RefreshToken.java`
-- `src/main/java/com/badminton/entity/PasswordResetToken.java`
-- `src/main/java/com/badminton/repository/UserRepository.java`
-- `src/main/java/com/badminton/repository/RoleRepository.java`
-- `src/main/java/com/badminton/repository/RefreshTokenRepository.java`
-- `src/main/java/com/badminton/repository/PasswordResetTokenRepository.java`
-
-**Estimated scope:** Medium: 6-8 files
-
----
-
-## Task 3: DTOs, Validation & MapStruct Mappers
-**Description:** Tạo các DTO request và response cho Authentication (đăng ký, đăng nhập, refresh token, đổi mật khẩu, quên mật khẩu, user profile) có gắn đầy đủ Bean Validation (`@NotBlank`, `@Email`, `@Size`, ...). Tạo MapStruct Mapper để chuyển đổi an toàn giữa Entity và DTO mà không làm lộ Entity ra ngoài API.
-
-**Acceptance criteria:**
-- [x] DTO request: `RegisterRequest`, `LoginRequest`, `RefreshTokenRequest`, `ForgotPasswordRequest`, `ResetPasswordRequest`.
-- [x] DTO response: `AuthResponse` (chứa accessToken, refreshToken, tokenType, expiresIn, user info tóm tắt), `UserResponse`.
-- [x] MapStruct `UserMapper` cấu hình `componentModel = "spring"` để map `User` sang `UserResponse` và bỏ qua password.
-
-**Verification:**
-- [x] Build succeeds: `.\mvnw.cmd compile`
-
-**Dependencies:** Task 2
-
-**Files likely touched:**
-- `src/main/java/com/badminton/dto/request/RegisterRequest.java`
-- `src/main/java/com/badminton/dto/request/LoginRequest.java`
-- `src/main/java/com/badminton/dto/request/RefreshTokenRequest.java`
-- `src/main/java/com/badminton/dto/request/ForgotPasswordRequest.java`
-- `src/main/java/com/badminton/dto/request/ResetPasswordRequest.java`
-- `src/main/java/com/badminton/dto/response/AuthResponse.java`
-- `src/main/java/com/badminton/dto/response/UserResponse.java`
-- `src/main/java/com/badminton/mapper/UserMapper.java`
-
-**Estimated scope:** Medium: 7-8 files
-
----
-
-## Checkpoint: Foundation Ready (Tasks 1-3)
-- [x] Dependencies và database driver được thiết lập đầy đủ.
-- [x] Mô hình dữ liệu và DTO mapping biên dịch trơn tru không lỗi.
-
----
-
-## Task 4: JWT Provider & Spring Security Configuration
-**Description:** Cấu hình Spring Security 6 với JWT filter không lưu session (`SessionCreationPolicy.STATELESS`), xử lý ngoại lệ AuthenticationEntryPoint và AccessDeniedHandler trả về JSON chuẩn, cài đặt `JwtTokenProvider` (tạo và kiểm tra chữ ký token, trích xuất username/claims) và `CustomUserDetailsService`.
-
-**Acceptance criteria:**
-- [x] `JwtTokenProvider` mã hóa và giải mã JWT sử dụng JJWT, quản lý thời gian hết hạn của access token.
-- [x] `CustomUserDetailsService` load người dùng từ database kèm danh sách GrantedAuthorities từ Role.
-- [x] `JwtAuthenticationFilter` chặn request, phân tích header `Authorization: Bearer <token>`, set Authentication vào SecurityContext.
-- [x] `SecurityConfig` cấu hình CSRF disable, CORS cho phép FE truy cập, mở permitAll cho các endpoint `/api/v1/auth/**`, `/v3/api-docs/**`, `/swagger-ui/**`.
-- [x] Kích hoạt `@EnableMethodSecurity` cho phép dùng `@PreAuthorize("hasRole(...)")`.
-- [x] Xử lý lỗi 401 Unauthorized và 403 Forbidden trả về `ApiResponse` định dạng JSON chuẩn.
-
-**Verification:**
-- [x] Build succeeds: `.\mvnw.cmd compile`
-
-**Dependencies:** Task 3
-
-**Files likely touched:**
-- `src/main/java/com/badminton/security/JwtTokenProvider.java`
-- `src/main/java/com/badminton/security/JwtAuthenticationFilter.java`
-- `src/main/java/com/badminton/security/CustomUserDetails.java`
-- `src/main/java/com/badminton/security/CustomUserDetailsService.java`
-- `src/main/java/com/badminton/security/JwtAuthenticationEntryPoint.java`
-- `src/main/java/com/badminton/security/CustomAccessDeniedHandler.java`
-- `src/main/java/com/badminton/config/SecurityConfig.java`
-
-**Estimated scope:** Large: 7 files
-
----
-
-## Task 5: Global Exception Handling & Custom Business Exceptions
-**Description:** Cài đặt `GlobalExceptionHandler` với `@RestControllerAdvice` để bắt toàn bộ ngoại lệ: Validation error (`MethodArgumentNotValidException`), Business exceptions (`AppException`, `ResourceNotFoundException`, `BadRequestException`), và `Exception` tổng quát, format thống nhất thành `{ "success": false, "code": "...", "message": "..." }`.
-
-**Acceptance criteria:**
-- [x] Lỗi validation trả HTTP 400 kèm chi tiết từng trường bị lỗi.
-- [x] Ngoại lệ business `AppException` trả mã lỗi theo enum `ErrorCode`.
-- [x] Bắt lỗi `AccessDeniedException` và `BadCredentialsException`.
+- [x] Các thành phần JWT được gom vào `com.badminton.security.jwt`.
+- [x] Các thành phần UserDetails được gom vào `com.badminton.security.userdetails`.
+- [x] `SecurityConfig` được cập nhật các import mới và biên dịch trơn tru.
 
 **Verification:**
 - [x] Build succeeds: `.\mvnw.cmd compile`
@@ -133,62 +43,118 @@
 **Dependencies:** Task 1
 
 **Files likely touched:**
-- `src/main/java/com/badminton/exception/AppException.java`
-- `src/main/java/com/badminton/exception/ResourceNotFoundException.java`
-- `src/main/java/com/badminton/exception/GlobalExceptionHandler.java`
+- `src/main/java/com/badminton/security/jwt/JwtTokenProvider.java`
+- `src/main/java/com/badminton/security/jwt/JwtAuthenticationFilter.java`
+- `src/main/java/com/badminton/security/jwt/JwtAuthenticationEntryPoint.java`
+- `src/main/java/com/badminton/security/jwt/CustomAccessDeniedHandler.java`
+- `src/main/java/com/badminton/security/userdetails/CustomUserDetails.java`
+- `src/main/java/com/badminton/security/userdetails/CustomUserDetailsService.java`
+- `src/main/java/com/badminton/security/SecurityConfig.java`
 
-**Estimated scope:** Small: 3 files
+**Estimated scope:** Medium: 7 files
 
 ---
 
-## Task 6: Implement AuthService & AuthController
-**Description:** Cài đặt `AuthService` (interface + implementation) xử lý toàn bộ logic nghiệp vụ: register (mã hóa password, gán role `ROLE_CUSTOMER`), login (xác thực credentials, phát sinh access token + refresh token), refreshToken (rotation, thu hồi token cũ, cấp mới), logout (thu hồi refresh token), forgotPassword (tạo reset token, log link ra console), resetPassword, getCurrentUser. Cài đặt `AuthController` tiếp nhận request và trả về DTO.
+## Task 3: Reorganize Notification Subsystem
+**Description:** Tổ chức lại toàn bộ hệ thống gửi thông báo đa kênh (Strategy Pattern) vào `com.badminton.notification`: DTO (`NotificationMessage`), Strategy Interface (`NotificationSender`), Dispatcher Interface (`NotificationService`), và các implementation trong `impl/` (`ConsoleEmailNotificationSender`, `ConsoleSmsNotificationSender`, `NotificationServiceImpl`).
 
 **Acceptance criteria:**
-- [x] Service dùng Constructor Injection (không `@Autowired` trên field).
-- [x] `@Transactional` đặt đúng biên nghiệp vụ.
-- [x] Password được băm bằng `BCryptPasswordEncoder`.
-- [x] Refresh token rotation: mỗi lần refresh thành công, token cũ bị thu hồi/cập nhật token mới.
-- [x] Forgot password sinh mã xác thực ngẫu nhiên, lưu DB có hạn 15 phút, log link ra console.
-- [x] Controller chỉ nhận/trả DTO bọc trong `ApiResponse<T>`, không chứa logic nghiệp vụ.
+- [x] `NotificationMessage` được chuyển vào `com.badminton.notification.dto`.
+- [x] `NotificationSender` và `NotificationService` nằm tại `com.badminton.notification`.
+- [x] Các implementation nằm trong `com.badminton.notification.impl`.
+- [x] Hệ thống Strategy Pattern hoạt động độc lập, sẵn sàng phục vụ bất kỳ module nào.
 
 **Verification:**
 - [x] Build succeeds: `.\mvnw.cmd compile`
 
-**Dependencies:** Task 4, Task 5
+**Dependencies:** Task 1
 
 **Files likely touched:**
-- `src/main/java/com/badminton/service/AuthService.java`
-- `src/main/java/com/badminton/service/impl/AuthServiceImpl.java`
-- `src/main/java/com/badminton/controller/AuthController.java`
+- `src/main/java/com/badminton/notification/dto/NotificationMessage.java`
+- `src/main/java/com/badminton/notification/NotificationSender.java`
+- `src/main/java/com/badminton/notification/NotificationService.java`
+- `src/main/java/com/badminton/notification/impl/ConsoleEmailNotificationSender.java`
+- `src/main/java/com/badminton/notification/impl/ConsoleSmsNotificationSender.java`
+- `src/main/java/com/badminton/notification/impl/NotificationServiceImpl.java`
 
-**Estimated scope:** Medium: 3-4 files
+**Estimated scope:** Medium: 6 files
 
 ---
 
-## Task 7: Data Seeder & Verification Tests
-**Description:** Viết `DataSeeder` (dùng `CommandLineRunner`) tự động khởi tạo các Role mặc định (`ROLE_ADMIN`, `ROLE_STAFF`, `ROLE_CUSTOMER`) và 1 tài khoản Admin mẫu nếu chưa tồn tại. Viết test hoặc kiểm thử tích hợp cho Auth API.
+## Checkpoint: Core Infrastructure Ready (Tasks 1-3)
+- [x] Toàn bộ hạ tầng `shared`, `security`, `notification` đã được tách độc lập và biên dịch không lỗi.
+
+---
+
+## Task 4: Migrate Module 1 into `modules/auth` Package
+**Description:** Tạo package nghiệp vụ `com.badminton.modules.auth` và gom toàn bộ mã nguồn của Module 1 Auth vào các thư mục con: `entity/` (User, Role, RefreshToken, PasswordResetToken), `repository/` (UserRepository, RoleRepository, RefreshTokenRepository, PasswordResetTokenRepository), `dto/` (request & response), `mapper/` (UserMapper, UserMapperFallbackImpl, MapperConfig), `service/` (AuthService, AuthServiceImpl), và `AuthController.java`. Xóa sạch các thư mục cũ kiểu Layered đã bị rỗng.
 
 **Acceptance criteria:**
-- [x] Role mặc định tự động được tạo khi khởi động ứng dụng nếu DB rỗng.
-- [x] Tài khoản Admin mẫu (`admin@badminton.com` / `Admin@123`) được khởi tạo sẵn sàng cho đăng nhập.
-- [x] Biên dịch dự án hoàn tất, test pass không có lỗi.
+- [x] Thư mục `com.badminton.modules.auth` chứa toàn bộ 100% mã nguồn liên quan đến xác thực và người dùng.
+- [x] Các thư mục cũ (`controller/`, `dto/`, `entity/`, `repository/`, `service/`, `mapper/`, `common/`, `exception/`) được dọn dẹp sạch sẽ.
+- [x] Dự án không còn file thừa hay class trùng lặp.
 
 **Verification:**
-- [x] Tests pass: `.\mvnw.cmd test`
+- [x] Build succeeds: `.\mvnw.cmd compile`
 
-**Dependencies:** Task 6
+**Dependencies:** Task 2, Task 3
+
+**Files likely touched:**
+- `src/main/java/com/badminton/modules/auth/entity/*`
+- `src/main/java/com/badminton/modules/auth/repository/*`
+- `src/main/java/com/badminton/modules/auth/dto/*`
+- `src/main/java/com/badminton/modules/auth/mapper/*`
+- `src/main/java/com/badminton/modules/auth/service/*`
+- `src/main/java/com/badminton/modules/auth/AuthController.java`
+
+**Estimated scope:** Large: 15-18 files
+
+---
+
+## Task 5: Update Tests, DataSeeder & End-to-End Build Verification
+**Description:** Cập nhật import trong `DataSeeder.java` và `AuthServiceTest.java` theo cấu trúc package mới. Chạy toàn bộ test bằng Maven (`mvn clean test`) để chứng minh toàn bộ logic nghiệp vụ, mock test và luồng xác thực vẫn hoạt động hoàn hảo 100%.
+
+**Acceptance criteria:**
+- [x] `DataSeeder.java` cập nhật đúng package và import mới.
+- [x] `AuthServiceTest.java` cập nhật đúng package và import mới.
+- [x] Lệnh `.\mvnw.cmd clean test` kết thúc với `BUILD SUCCESS` (toàn bộ test đều Pass: 5/5).
+
+**Verification:**
+- [x] Tests pass: `.\mvnw.cmd clean test`
+
+**Dependencies:** Task 4
 
 **Files likely touched:**
 - `src/main/java/com/badminton/config/DataSeeder.java`
-- `src/test/java/com/badminton/service/AuthServiceTest.java`
+- `src/test/java/com/badminton/modules/auth/AuthServiceTest.java`
 
-**Estimated scope:** Small: 1-2 files
+**Estimated scope:** Small: 2-3 files
 
 ---
 
-## Checkpoint: Module 1 Complete
-- [x] Toàn bộ luồng đăng ký, đăng nhập, refresh token, quên mật khẩu, phân quyền hoạt động ổn định.
-- [x] Tài liệu API tích hợp Frontend tại `docs/api/module-1-auth-rbac.md` đã sẵn sàng.
-- [x] Tài liệu kiến trúc và phân quyền tại `docs/architecture/architecture-and-rbac.md` đã sẵn sàng.
-- [x] Dừng lại để người dùng review trước khi chuyển sang Module 2.
+## Task 6: Synchronize Documentation
+**Description:** Cập nhật lại các tài liệu kiến trúc [`README.md`](README.md), [`docs/architecture/architecture-and-rbac.md`](docs/architecture/architecture-and-rbac.md), [`docs/architecture/modules/module-1-auth.md`](docs/architecture/modules/module-1-auth.md) để phản ánh cấu trúc Package-by-Feature mới.
+
+**Acceptance criteria:**
+- [x] Sơ đồ cây thư mục trong tài liệu phản ánh chính xác cấu trúc `shared/`, `security/`, `notification/`, `modules/auth/`.
+- [x] Đường dẫn code trong tài liệu được cập nhật đầy đủ.
+
+**Verification:**
+- [x] Manual review tài liệu
+
+**Dependencies:** Task 5
+
+**Files likely touched:**
+- `README.md`
+- `docs/architecture/architecture-and-rbac.md`
+- `docs/architecture/modules/module-1-auth.md`
+
+**Estimated scope:** Small: 4 markdown files
+
+---
+
+## Checkpoint: Refactoring Complete
+- [x] Cấu trúc Package-by-Feature hoàn chỉnh, gọn gàng, trực quan.
+- [x] Toàn bộ unit test Pass, Spring Boot biên dịch trơn tru (5/5 tests pass).
+- [x] Sẵn sàng triển khai tiếp Module 2 vào thẳng `modules/auth/` hoặc `modules/user/`.
+

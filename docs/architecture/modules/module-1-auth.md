@@ -24,37 +24,48 @@
 
 ```
 com.badminton
-├── entity/
-│   ├── User.java                   # Thông tin người dùng, liên kết Many-to-Many với Role
-│   ├── Role.java                   # Vai trò hệ thống (ROLE_ADMIN, ROLE_STAFF, ROLE_CUSTOMER)
-│   ├── RefreshToken.java           # Token làm mới (quản lý expiryDate, revoked)
-│   └── PasswordResetToken.java     # Token quên mật khẩu (quản lý expiryDate, used)
-├── repository/
-│   ├── UserRepository.java         # Query theo email, phone, check tồn tại
-│   ├── RoleRepository.java         # Query theo RoleType enum
-│   ├── RefreshTokenRepository.java # Tìm token, revokeAllUserTokens
-│   └── PasswordResetTokenRepository.java # Tìm token hợp lệ chưa dùng
-├── dto/
-│   ├── request/                    # RegisterRequest, LoginRequest, RefreshTokenRequest, ...
-│   └── response/                   # AuthResponse, UserResponse
-├── mapper/
-│   └── UserMapper.java             # MapStruct: chuyển User <-> UserResponse, ẩn mật khẩu
-├── security/
-│   ├── JwtTokenProvider.java       # Ký HMAC-SHA256, sinh và kiểm tra JWT token
-│   ├── JwtAuthenticationFilter.java# Chặn request, trích xuất Bearer token, gán SecurityContext
-│   ├── CustomUserDetails.java      # Hiện thực UserDetails của Spring Security
-│   ├── CustomUserDetailsService.java # Nạp User từ database theo email
-│   ├── JwtAuthenticationEntryPoint.java # Trả JSON chuẩn ApiResponse khi 401 Unauthorized
-│   └── CustomAccessDeniedHandler.java   # Trả JSON chuẩn ApiResponse khi 403 Forbidden
-├── service/
-│   ├── AuthService.java            # Interface nghiệp vụ xác thực
-│   ├── impl/AuthServiceImpl.java   # Triển khai nghiệp vụ (Transaction, Hash mật khẩu, Token rotation)
-│   └── notification/               # Hệ thống thông báo phân tầng (Notification Subsystem)
-│       ├── NotificationSender.java # Strategy Interface (supports, send)
-│       ├── NotificationService.java# High-level dispatcher interface
-│       └── impl/                   # ConsoleEmailSender, ConsoleSmsSender, NotificationServiceImpl
-└── controller/
-    └── AuthController.java         # REST Controller, bọc ApiResponse<T>, tích hợp Swagger OpenAPI
+├── shared/                                     # Dùng chung toàn hệ thống
+│   ├── response/ApiResponse.java               # Chuẩn JSON response
+│   ├── entity/BaseEntity.java                  # Auditing entity (createdAt, updatedAt)
+│   ├── exception/ErrorCode.java, AppException  # Mã lỗi nghiệp vụ & custom exception
+│   └── constant/RoleConstants.java, RoleType   # Hằng số vai trò & kênh thông báo
+│
+├── security/                                   # Phân hệ bảo mật & JWT
+│   ├── jwt/JwtTokenProvider.java               # Ký HMAC-SHA256, sinh và kiểm tra JWT token
+│   ├── jwt/JwtAuthenticationFilter.java        # Chặn request, trích xuất Bearer token, gán SecurityContext
+│   ├── jwt/JwtAuthenticationEntryPoint.java    # Trả JSON chuẩn ApiResponse khi 401 Unauthorized
+│   ├── jwt/CustomAccessDeniedHandler.java      # Trả JSON chuẩn ApiResponse khi 403 Forbidden
+│   ├── userdetails/CustomUserDetails.java      # Hiện thực UserDetails của Spring Security
+│   ├── userdetails/CustomUserDetailsService.java # Nạp User từ database theo email
+│   └── SecurityConfig.java                     # Cấu hình SecurityFilterChain & Method Security
+│
+├── notification/                               # Phân hệ thông báo đa kênh (Strategy Pattern)
+│   ├── dto/NotificationMessage.java            # DTO gói tin thông báo
+│   ├── NotificationSender.java                 # Strategy Interface (supports, send)
+│   ├── NotificationService.java                # High-level dispatcher interface
+│   └── impl/                                   # ConsoleEmailNotificationSender, NotificationServiceImpl...
+│
+└── modules/auth/                               # FEATURE MODULE: Xác thực & Người dùng
+    ├── entity/
+    │   ├── User.java                           # Thông tin người dùng, liên kết Many-to-Many với Role
+    │   ├── Role.java                           # Vai trò hệ thống (ROLE_ADMIN, ROLE_STAFF, ROLE_CUSTOMER)
+    │   ├── RefreshToken.java                   # Token làm mới (quản lý expiryDate, revoked)
+    │   └── PasswordResetToken.java             # Token quên mật khẩu (quản lý expiryDate, used)
+    ├── repository/
+    │   ├── UserRepository.java                 # Query theo email, phone, check tồn tại
+    │   ├── RoleRepository.java                 # Query theo RoleType enum
+    │   ├── RefreshTokenRepository.java         # Tìm token, revokeAllUserTokens
+    │   └── PasswordResetTokenRepository.java   # Tìm token hợp lệ chưa dùng
+    ├── dto/
+    │   ├── request/                            # RegisterRequest, LoginRequest, RefreshTokenRequest...
+    │   └── response/                           # AuthResponse, UserResponse
+    ├── mapper/
+    │   ├── UserMapper.java                     # MapStruct: chuyển User <-> UserResponse, ẩn mật khẩu
+    │   └── fallback/UserMapperFallbackImpl.java# Fallback dự phòng
+    ├── service/
+    │   ├── AuthService.java                    # Interface nghiệp vụ xác thực
+    │   └── impl/AuthServiceImpl.java           # Triển khai nghiệp vụ (Transaction, Hash mật khẩu, Token rotation)
+    └── AuthController.java                     # REST Controller, bọc ApiResponse<T>, tích hợp Swagger OpenAPI
 ```
 
 ---

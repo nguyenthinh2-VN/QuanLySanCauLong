@@ -5,39 +5,48 @@
 
 ---
 
-## 1. Sơ Đồ Kiến Trúc Phân Tầng (Layered Architecture)
+## 1. Sơ Đồ Kiến Trúc Package-by-Feature (Modular Monolith)
 
-Hệ thống được tổ chức phân tầng chặt chẽ dưới package `com.badminton`. Dữ liệu chỉ đi theo một chiều từ ngoài vào trong:
+Hệ thống được tổ chức theo kiến trúc **Package-by-Feature (Modular Monolith kết hợp Shared Kernel)** dưới package `com.badminton`:
 
 ```
-[ Client / Web Frontend ]
-          │ HTTP Request (JSON)
-          ▼
-┌───────────────────────────────────────────────────────────┐
-│ com.badminton.controller                                  │
-│  - Chỉ nhận Request, Validate (@Valid), gọi Service       │
-│  - Trả về ApiResponse<DTO>, tuyệt đối KHÔNG có logic nặng │
-└─────────────────────────┬─────────────────────────────────┘
-                          │ DTO
-                          ▼
-┌───────────────────────────────────────────────────────────┐
-│ com.badminton.service                                     │
-│  - Interface + Impl: Chứa toàn bộ Business Logic          │
-│  - Quản lý biên giao dịch (@Transactional)                │
-│  - Gọi Mapper chuyển đổi Entity <-> DTO                   │
-└─────────────────────────┬─────────────────────────────────┘
-                          │ Entity / Query Params
-                          ▼
-┌───────────────────────────────────────────────────────────┐
-│ com.badminton.repository (Spring Data JPA)                │
-│  - Giao tiếp với Database qua Hibernate                   │
-│  - Tối ưu truy vấn bằng JPQL / DTO Projection             │
-└─────────────────────────┬─────────────────────────────────┘
-                          │ SQL
-                          ▼
-┌───────────────────────────────────────────────────────────┐
-│ Database (MySQL 8.x)                                      │
-└───────────────────────────────────────────────────────────┘
+com.badminton
+├── shared/                                 # Shared Kernel (Hạ tầng dùng chung toàn hệ thống)
+│   ├── response/                           # ApiResponse chuẩn hóa cho toàn bộ REST API
+│   ├── entity/                             # BaseEntity (Auditing createdAt, updatedAt)
+│   ├── exception/                          # GlobalExceptionHandler, AppException, ErrorCode
+│   ├── constant/                           # RoleConstants, RoleType, NotificationChannel...
+│   └── config/                             # OpenApiConfig
+│
+├── security/                               # Phân hệ Bảo Mật Độc Lập (Cross-Cutting Concern)
+│   ├── jwt/                                # JwtTokenProvider, JwtAuthenticationFilter, EntryPoint
+│   ├── userdetails/                        # CustomUserDetails, CustomUserDetailsService
+│   └── SecurityConfig.java                 # Cấu hình SecurityFilterChain & Method Security
+│
+├── notification/                           # Phân hệ Thông Báo Đa Kênh (Strategy Pattern)
+│   ├── dto/                                # NotificationMessage
+│   ├── NotificationSender.java             # Interface Strategy (Open-Closed Principle)
+│   ├── NotificationService.java            # Interface Dispatcher (Dependency Inversion)
+│   └── impl/                               # ConsoleEmailSender, ConsoleSmsSender, NotificationServiceImpl
+│
+├── modules/                                # CÁC FEATURE / DOMAIN NGHIỆP VỤ ĐỘC LẬP
+│   └── auth/                               # [Module 1 & 2] Authentication, Users & RBAC
+│       ├── entity/                         # User, Role, RefreshToken, PasswordResetToken
+│       ├── repository/                     # UserRepository, RoleRepository...
+│       ├── dto/                            # Request & Response DTOs
+│       ├── mapper/                         # UserMapper (MapStruct) & Fallback
+│       ├── service/                        # AuthService & AuthServiceImpl
+│       └── AuthController.java             # REST API Controller
+│   │
+│   ├── court/                              # [Module 3] Cụm sân, Sân con, Khung giờ, Bảng giá
+│   ├── booking/                            # [Module 4 & 5] Đặt sân, Check slot trùng, Lịch cố định
+│   ├── payment/                            # [Module 6] Thanh toán giả lập, Đặt cọc, Hoàn tiền
+│   ├── voucher/                            # [Module 7] Khuyến mãi & Áp mã
+│   └── dashboard/                          # [Module 8] Báo cáo doanh thu & Tỉ lệ lấp đầy
+│
+├── config/
+│   └── DataSeeder.java                     # Khởi tạo dữ liệu mẫu (Roles & Default Admin)
+└── QuanLySanCauLongApplication.java        # Main Application Class
 ```
 
 ---

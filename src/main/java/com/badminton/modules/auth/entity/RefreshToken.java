@@ -1,0 +1,48 @@
+package com.badminton.modules.auth.entity;
+
+import com.badminton.shared.entity.BaseEntity;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+import java.time.Instant;
+
+@Entity
+@Table(name = "refresh_tokens")
+@Getter
+@Setter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class RefreshToken extends BaseEntity {
+
+    @Column(name = "token", nullable = false, unique = true, length = 255)
+    private String token;
+
+    @Column(name = "expiry_date", nullable = false)
+    private Instant expiryDate;
+
+    @Builder.Default
+    @Column(name = "revoked", nullable = false)
+    private boolean revoked = false;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
+    public boolean isExpired() {
+        return Instant.now().isAfter(this.expiryDate);
+    }
+
+    public boolean isValid() {
+        return !this.revoked && !isExpired();
+    }
+}
