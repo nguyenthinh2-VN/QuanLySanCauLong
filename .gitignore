@@ -33,3 +33,5 @@ build/
 .vscode/
 
 .agent
+# CocoIndex Code (ccc)
+/.cocoindex_code/

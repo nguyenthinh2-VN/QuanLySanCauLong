@@ -29,6 +29,7 @@ import com.badminton.shared.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -39,6 +40,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Optional;
 import java.util.UUID;
 
 @Slf4j
@@ -83,7 +85,15 @@ public class AuthServiceImpl implements AuthService {
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.addRole(customerRole);
 
-        User savedUser = userRepository.save(user);
+        User savedUser;
+        try {
+            savedUser = userRepository.saveAndFlush(user);
+        } catch (DataIntegrityViolationException ex) {
+            if (userRepository.existsByEmail(request.getEmail())) {
+                throw new AppException(ErrorCode.EMAIL_ALREADY_EXISTS);
+            }
+            throw new AppException(ErrorCode.PHONE_ALREADY_EXISTS);
+        }
 
         // Gửi thông báo chào mừng qua NotificationService (DIP/OCP)
         NotificationMessage welcomeNotification = NotificationMessage.builder()
@@ -166,9 +176,13 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public void forgotPassword(ForgotPasswordRequest request) {
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND,
-                        "Không tìm thấy người dùng với email: " + request.getEmail()));
+        Optional<User> userOptional = userRepository.findByEmail(request.getEmail());
+        if (userOptional.isEmpty()) {
+            log.debug("Yêu cầu quên mật khẩu cho email không tồn tại: {}", request.getEmail());
+            return;
+        }
+
+        User user = userOptional.get();
 
         String tokenString = UUID.randomUUID().toString();
         Instant expiryDate = Instant.now().plus(resetPasswordTokenExpirationMinutes, ChronoUnit.MINUTES);

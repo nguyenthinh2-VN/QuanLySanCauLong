@@ -130,7 +130,7 @@ class AuthServiceTest {
                 when(roleRepository.findByName(RoleType.ROLE_CUSTOMER)).thenReturn(Optional.of(customerRole));
                 when(userMapper.toUser(request)).thenReturn(unmappedUser);
                 when(passwordEncoder.encode(request.getPassword())).thenReturn("encoded-password");
-                when(userRepository.save(any(User.class))).thenReturn(user);
+                when(userRepository.saveAndFlush(any(User.class))).thenReturn(user);
 
                 UserResponse expectedResponse = UserResponse.builder()
                                 .fullName("Test User")
@@ -146,7 +146,7 @@ class AuthServiceTest {
 
                 assertThat(result).isNotNull();
                 assertThat(result.getEmail()).isEqualTo("test@example.com");
-                verify(userRepository).save(any(User.class));
+                verify(userRepository).saveAndFlush(any(User.class));
         }
 
         @Test
@@ -248,5 +248,51 @@ class AuthServiceTest {
 
                 verify(passwordResetTokenRepository).save(any(PasswordResetToken.class));
                 verify(notificationService).send(any(NotificationMessage.class));
+        }
+
+        @Test
+        @DisplayName("Quên mật khẩu - email không tồn tại thì không throw exception và không gửi thông báo")
+        void forgotPassword_EmailNotFound_DoesNotThrowAndDoesNotSendNotification() {
+                ForgotPasswordRequest request = ForgotPasswordRequest.builder()
+                                .email("nonexistent@example.com")
+                                .build();
+
+                when(userRepository.findByEmail("nonexistent@example.com")).thenReturn(Optional.empty());
+
+                org.junit.jupiter.api.Assertions.assertDoesNotThrow(() -> authService.forgotPassword(request));
+
+                org.mockito.Mockito.verifyNoInteractions(passwordResetTokenRepository);
+                org.mockito.Mockito.verifyNoInteractions(notificationService);
+        }
+
+        @Test
+        @DisplayName("Đăng ký - bắt lỗi DataIntegrityViolationException khi trùng email do Race Condition")
+        void register_ConcurrencyDuplicateEmail_ThrowsException() {
+                RegisterRequest request = RegisterRequest.builder()
+                                .fullName("Test User")
+                                .email("test@example.com")
+                                .phone("0987654321")
+                                .password("Password@123")
+                                .build();
+
+                User unmappedUser = User.builder()
+                                .fullName("Test User")
+                                .email("test@example.com")
+                                .phone("0987654321")
+                                .active(true)
+                                .roles(new HashSet<>())
+                                .build();
+
+                when(userRepository.existsByEmail(anyString())).thenReturn(false).thenReturn(true);
+                when(userRepository.existsByPhone(anyString())).thenReturn(false);
+                when(roleRepository.findByName(RoleType.ROLE_CUSTOMER)).thenReturn(Optional.of(customerRole));
+                when(userMapper.toUser(request)).thenReturn(unmappedUser);
+                when(passwordEncoder.encode(request.getPassword())).thenReturn("encoded-password");
+                when(userRepository.saveAndFlush(any(User.class)))
+                                .thenThrow(new org.springframework.dao.DataIntegrityViolationException("Unique constraint violation"));
+
+                assertThatThrownBy(() -> authService.register(request))
+                                .isInstanceOf(AppException.class)
+                                .hasMessage(ErrorCode.EMAIL_ALREADY_EXISTS.getMessage());
         }
 }
