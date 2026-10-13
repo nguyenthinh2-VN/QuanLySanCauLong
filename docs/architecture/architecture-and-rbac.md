@@ -70,12 +70,13 @@ com.badminton
 ### 📌 3. Tài Liệu Chi Tiết Từng Module (Modules Deep-Dive)
 Mỗi module đều có một tài liệu phân tích riêng biệt (bài toán giải quyết, cấu trúc code, phân tích chi tiết mức độ áp dụng SOLID):
 - 📘 **Module 1 (Auth & RBAC):** [`docs/architecture/modules/module-1-auth.md`](modules/module-1-auth.md) *(Áp dụng trọn vẹn 5/5 nguyên tắc SOLID)*.
-- 📘 **Module 2 (User Management & Role Assignment):** *(Sẽ tạo khi thực hiện Module 2)*.
+- 📘 **Module 2 (User Management & Role Assignment):** [`docs/architecture/modules/module-2-user-management.md`](modules/module-2-user-management.md) *(Bảo mật ADMIN, 4 Guards nghiệp vụ & Specification search)*.
 - 📘 **Module 3 (Courts, TimeSlots & Pricing):** *(Sẽ tạo khi thực hiện Module 3)*.
 - 📘 **Module 4 (Bookings & Concurrency Control):** *(Sẽ tạo khi thực hiện Module 4)*.
 
 ### 📌 4. Tài Liệu Tích Hợp API Cho Frontend
-👉 **Đọc tại:** [`docs/api/module-1-auth-rbac.md`](../api/module-1-auth-rbac.md)
+- [Module 1: Auth & RBAC API Docs](../api/module-1-auth-rbac.md)
+- [Module 2: User Management API Docs](../api/module-2-user-management.md)
 - Hướng dẫn Request body, URL, Response format và mẫu cấu hình Axios Interceptor cho Frontend Developer.
 
 ---

@@ -72,5 +72,6 @@ Hệ thống tích hợp sẵn `DataSeeder` tự động khởi tạo dữ liệ
 Thư mục `docs/` được phân tách khoa học để dễ bảo trì và tích hợp Frontend:
 - `docs/api/`: Tài liệu chi tiết các endpoint phục vụ đội ngũ làm Frontend (request body, response format, mã lỗi).
   - [Module 1: Auth & RBAC API Docs](docs/api/module-1-auth-rbac.md)
+  - [Module 2: User Management API Docs](docs/api/module-2-user-management.md)
 - `docs/architecture/`: Tài liệu kiến trúc Package-by-Feature (Modular Monolith), nguyên tắc thiết kế SOLID và ma trận phân quyền chi tiết (RBAC Matrix).
   - [Kiến trúc & RBAC Matrix](docs/architecture/architecture-and-rbac.md)

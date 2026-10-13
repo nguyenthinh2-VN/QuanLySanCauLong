@@ -27,10 +27,14 @@ Hệ thống sử dụng enum `RoleType` lưu trong bảng `roles`, quan hệ Ma
 | 4 | Đăng xuất | `POST /api/v1/auth/logout` | ✅ | ✅ | ✅ | ✅ | Thu hồi Refresh Token |
 | 5 | Quên / Đặt lại mật khẩu | `POST /api/v1/auth/forgot-password`<br>`POST /api/v1/auth/reset-password` | ✅ | ✅ | ✅ | ✅ | Xác thực bằng token OTP thời hạn 15 phút |
 | 6 | Xem thông tin của tôi | `GET /api/v1/auth/me` | ❌ | ✅ | ✅ | ✅ | `@PreAuthorize("isAuthenticated()")` |
-| **II** | **Người dùng (Users)** | | | | | | *(Module 2)* |
-| 7 | Xem danh sách users | `GET /api/v1/users` | ❌ | ❌ | ❌ | ✅ | `@PreAuthorize("hasRole('ADMIN')")` |
-| 8 | Khóa/Mở tài khoản | `PATCH /api/v1/users/{id}/status` | ❌ | ❌ | ❌ | ✅ | `@PreAuthorize("hasRole('ADMIN')")` |
-| 9 | Gán quyền Role | `PUT /api/v1/users/{id}/roles` | ❌ | ❌ | ❌ | ✅ | `@PreAuthorize("hasRole('ADMIN')")` |
+| **II** | **Quản lý người dùng (Users)** | | | | | | *(Module 2)* |
+| 7 | Xem danh sách users (phân trang, search, lọc) | `GET /api/v1/admin/users` | ❌ | ❌ | ❌ | ✅ | `@PreAuthorize("hasRole('ADMIN')")` |
+| 8 | Xem chi tiết user theo ID | `GET /api/v1/admin/users/{id}` | ❌ | ❌ | ❌ | ✅ | `@PreAuthorize("hasRole('ADMIN')")` |
+| 9 | Tạo user mới (STAFF / CUSTOMER) | `POST /api/v1/admin/users` | ❌ | ❌ | ❌ | ✅ | `@PreAuthorize("hasRole('ADMIN')")` |
+| 10| Cập nhật thông tin cơ bản | `PUT /api/v1/admin/users/{id}` | ❌ | ❌ | ❌ | ✅ | `@PreAuthorize("hasRole('ADMIN')")` |
+| 11| Cập nhật vai trò / quyền hạn | `PATCH /api/v1/admin/users/{id}/roles` | ❌ | ❌ | ❌ | ✅ | `@PreAuthorize("hasRole('ADMIN')")` |
+| 12| Khóa / Mở khóa tài khoản | `PATCH /api/v1/admin/users/{id}/status` | ❌ | ❌ | ❌ | ✅ | `@PreAuthorize("hasRole('ADMIN')")` |
+| 13| Xóa tài khoản (Hard delete) | `DELETE /api/v1/admin/users/{id}` | ❌ | ❌ | ❌ | ✅ | `@PreAuthorize("hasRole('ADMIN')")` |
 | **III**| **Sân bãi (Courts)** | | | | | | *(Module 3)* |
 | 10| Xem danh sách cụm sân | `GET /api/v1/complexes` | ✅ | ✅ | ✅ | ✅ | `permitAll` |
 | 11| CRUD cụm sân / sân con | `POST, PUT, DELETE /api/v1/courts/**` | ❌ | ❌ | ❌ | ✅ | `@PreAuthorize("hasRole('ADMIN')")` |

@@ -40,4 +40,26 @@ public class UserMapperFallbackImpl implements UserMapper {
                 .active(true)
                 .build();
     }
+
+    @Override
+    public User toUser(com.badminton.modules.auth.dto.request.CreateUserRequest request) {
+        if (request == null) {
+            return null;
+        }
+        return User.builder()
+                .fullName(request.getFullName())
+                .email(request.getEmail())
+                .phone(request.getPhone())
+                .active(true)
+                .build();
+    }
+
+    @Override
+    public void updateUserFromRequest(User user, com.badminton.modules.auth.dto.request.UpdateUserRequest request) {
+        if (user == null || request == null) {
+            return;
+        }
+        user.setFullName(request.getFullName());
+        user.setPhone(request.getPhone());
+    }
 }
