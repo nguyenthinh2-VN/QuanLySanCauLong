@@ -128,6 +128,7 @@ class TimeSlotServiceTest {
                 .name("Sai giờ")
                 .startTime(LocalTime.of(12, 0))
                 .endTime(LocalTime.of(12, 0))
+                
                 .pricePerHour(new BigDecimal("100000"))
                 .build();
 

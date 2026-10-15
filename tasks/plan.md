@@ -165,3 +165,7 @@ src/main/java/com/badminton/modules/court/
   - Tạo `docs/architecture/modules/module-3-courts.md` (mô tả kiến trúc + bảng phân tích SOLID).
   - Cập nhật `docs/architecture/architecture-and-rbac.md` (sửa 2 dòng trạng thái Module 2 & Module 3).
   - Cập nhật `docs/architecture/rbac-matrix.md` (khớp thiết kế tách Cụm sân và Sân con).
+
+- **Phase 7: Kế Hoạch & Báo Cáo Kiểm Thử Toàn Diện**
+  - Xem chi tiết tại [tasks/test-plan.md](file:///e:/QuanLySanCauLong/tasks/test-plan.md): Báo cáo 48/48 tests PASS 100%, ma trận test cases, phân tích guards nghiệp vụ và kết quả audit qua `open-code-review-delegate`.
+

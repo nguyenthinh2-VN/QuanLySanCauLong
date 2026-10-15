@@ -187,8 +187,32 @@
 
 ---
 
+## Task 7: Test Plan & Code Review Documentation
+**Description:** Lập kế hoạch kiểm thử chi tiết, tổng hợp báo cáo thực thi 48 unit tests của hệ thống, và ghi nhận kết quả đánh giá chất lượng qua Open Code Review (`ocr delegate`).
+
+**Acceptance criteria:**
+- [x] Tạo `tasks/test-plan.md` phân tích chi tiết chiến lược kiểm thử, ma trận test cases, các guards nghiệp vụ được bảo vệ cho cả 5 Test Suites.
+- [x] Ghi nhận số liệu thực thi kiểm thử: 48/48 tests PASS 100%, thời gian chạy ~1.88s.
+- [x] Tích hợp kết quả đánh giá độc lập từ bộ quy tắc `open-code-review-delegate`.
+- [x] Cập nhật liên kết trong `tasks/plan.md`.
+
+**Verification:**
+- [x] Tests run: `.\mvnw.cmd test` (48/48 PASS).
+- [x] Đã khởi tạo và hoàn thiện `tasks/test-plan.md`.
+
+**Dependencies:** Task 5, Task 6
+
+**Files likely touched:**
+- `tasks/test-plan.md`
+- `tasks/plan.md`
+
+---
+
 ## Checkpoint 3: Module 3 Ready for Review & Handover
 - [x] Tất cả 13 endpoints hoạt động đúng đặc tả 100%.
 - [x] Toàn bộ checklist tự kiểm tra đều pass.
-- [x] Build & Test thành công: `.\mvnw.cmd clean test`.
-- [x] Tài liệu đồng bộ hoàn chỉnh.
+- [x] Build & Test thành công: `.\mvnw.cmd test` (48/48 PASS).
+- [x] Tài liệu API & Kiến trúc đồng bộ hoàn chỉnh.
+- [x] Kế hoạch & Báo cáo kiểm thử hoàn thành (`tasks/test-plan.md`).
+- [x] Code Review qua Open Code Review đạt chuẩn phê duyệt (APPROVED).
+
