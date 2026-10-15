@@ -71,12 +71,13 @@ com.badminton
 Mỗi module đều có một tài liệu phân tích riêng biệt (bài toán giải quyết, cấu trúc code, phân tích chi tiết mức độ áp dụng SOLID):
 - 📘 **Module 1 (Auth & RBAC):** [`docs/architecture/modules/module-1-auth.md`](modules/module-1-auth.md) *(Áp dụng trọn vẹn 5/5 nguyên tắc SOLID)*.
 - 📘 **Module 2 (User Management & Role Assignment):** [`docs/architecture/modules/module-2-user-management.md`](modules/module-2-user-management.md) *(Bảo mật ADMIN, 4 Guards nghiệp vụ & Specification search)*.
-- 📘 **Module 3 (Courts, TimeSlots & Pricing):** *(Sẽ tạo khi thực hiện Module 3)*.
+- 📘 **Module 3 (Courts, TimeSlots & Pricing):** [`docs/architecture/modules/module-3-courts.md`](modules/module-3-courts.md) *(Resource Cụm sân & Sân con, Khung giờ & Bảng giá, 13 Endpoints, Whitelist Sort & Interval Overlap Guards)*.
 - 📘 **Module 4 (Bookings & Concurrency Control):** *(Sẽ tạo khi thực hiện Module 4)*.
 
 ### 📌 4. Tài Liệu Tích Hợp API Cho Frontend
 - [Module 1: Auth & RBAC API Docs](../api/module-1-auth-rbac.md)
 - [Module 2: User Management API Docs](../api/module-2-user-management.md)
+- [Module 3: Courts, TimeSlots & Pricing API Docs](../api/module-3-courts.md)
 - Hướng dẫn Request body, URL, Response format và mẫu cấu hình Axios Interceptor cho Frontend Developer.
 
 ---
@@ -85,6 +86,6 @@ Mỗi module đều có một tài liệu phân tích riêng biệt (bài toán 
 
 Nếu bạn là một AI Agent đang tiếp nhận dự án này:
 1. **Luôn tuân thủ nguyên tắc Dependency Inversion:** Mọi Service injection phải qua constructor (dùng `@RequiredArgsConstructor`), tuyệt đối không dùng `@Autowired` trên field.
-2. **Không để lộ JPA Entity ra ngoài API:** Controller chỉ được phép nhận và trả về DTO. Sử dụng MapStruct (`com.badminton.mapper`) để chuyển đổi.
+2. **Không để lộ JPA Entity ra ngoài API:** Controller chỉ được phép nhận và trả về DTO. Sử dụng MapStruct (nằm trong thư mục `mapper/` của từng feature package) để chuyển đổi.
 3. **Mọi phản hồi API đều bọc qua `ApiResponse<T>`:** Không bao giờ trả raw Object hoặc raw ResponseEntity không có cấu trúc chuẩn.
 4. **Khi thêm tính năng mới:** Kiểm tra ma trận quyền tại [`rbac-matrix.md`](rbac-matrix.md) để gắn `@PreAuthorize` tương ứng trên Controller.

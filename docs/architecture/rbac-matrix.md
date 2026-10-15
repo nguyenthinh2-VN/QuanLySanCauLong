@@ -36,24 +36,27 @@ Hệ thống sử dụng enum `RoleType` lưu trong bảng `roles`, quan hệ Ma
 | 12| Khóa / Mở khóa tài khoản | `PATCH /api/v1/admin/users/{id}/status` | ❌ | ❌ | ❌ | ✅ | `@PreAuthorize("hasRole('ADMIN')")` |
 | 13| Xóa tài khoản (Hard delete) | `DELETE /api/v1/admin/users/{id}` | ❌ | ❌ | ❌ | ✅ | `@PreAuthorize("hasRole('ADMIN')")` |
 | **III**| **Sân bãi (Courts)** | | | | | | *(Module 3)* |
-| 10| Xem danh sách cụm sân | `GET /api/v1/complexes` | ✅ | ✅ | ✅ | ✅ | `permitAll` |
-| 11| CRUD cụm sân / sân con | `POST, PUT, DELETE /api/v1/courts/**` | ❌ | ❌ | ❌ | ✅ | `@PreAuthorize("hasRole('ADMIN')")` |
-| 12| Cấu hình khung giờ & bảng giá | `POST, PUT /api/v1/time-slots/**` | ❌ | ❌ | ❌ | ✅ | `@PreAuthorize("hasRole('ADMIN')")` |
+| 10| Xem danh sách & chi tiết cụm sân | `GET /api/v1/complexes/**` | ✅ | ✅ | ✅ | ✅ | `permitAll` |
+| 11| CRUD Cụm sân | `POST, PUT, DELETE /api/v1/complexes/**` | ❌ | ❌ | ❌ | ✅ | `@PreAuthorize("hasRole('ADMIN')")` |
+| 12| Xem danh sách & chi tiết sân con | `GET /api/v1/courts/**` | ✅ | ✅ | ✅ | ✅ | `permitAll` |
+| 13| CRUD Sân con | `POST, PUT, DELETE /api/v1/courts/**` | ❌ | ❌ | ❌ | ✅ | `@PreAuthorize("hasRole('ADMIN')")` |
+| 14| Xem khung giờ & bảng giá | `GET /api/v1/time-slots` | ✅ | ✅ | ✅ | ✅ | `permitAll` |
+| 15| Cấu hình khung giờ & bảng giá | `POST, PUT /api/v1/time-slots/**` | ❌ | ❌ | ❌ | ✅ | `@PreAuthorize("hasRole('ADMIN')")` |
 | **IV** | **Đặt sân (Bookings)** | | | | | | *(Module 4 & 5)* |
-| 13| Xem slot sân trống | `GET /api/v1/bookings/availability` | ✅ | ✅ | ✅ | ✅ | `permitAll` (Cho phép khách tìm giờ trống) |
-| 14| Đặt sân online | `POST /api/v1/bookings` | ❌ | ✅ | ✅ | ✅ | `@PreAuthorize("isAuthenticated()")` |
-| 15| Đặt sân tại quầy (Khách vãng lai) | `POST /api/v1/bookings/pos` | ❌ | ❌ | ✅ | ✅ | `@PreAuthorize("hasAnyRole('STAFF', 'ADMIN')")` |
-| 16| Check-in khách vào sân | `POST /api/v1/bookings/{id}/check-in` | ❌ | ❌ | ✅ | ✅ | `@PreAuthorize("hasAnyRole('STAFF', 'ADMIN')")` |
-| 17| Hủy / Đổi lịch của mình | `PUT, DELETE /api/v1/bookings/{id}` | ❌ | ✅ | ✅ | ✅ | `@PreAuthorize("hasRole('ADMIN') or @bookingSecurity.isOwner(#id)")` |
-| 18| Đặt lịch cố định hàng tuần | `POST /api/v1/bookings/recurring` | ❌ | ✅ | ✅ | ✅ | Khách hàng thân thiết / Admin |
+| 16| Xem slot sân trống | `GET /api/v1/bookings/availability` | ✅ | ✅ | ✅ | ✅ | `permitAll` (Cho phép khách tìm giờ trống) |
+| 17| Đặt sân online | `POST /api/v1/bookings` | ❌ | ✅ | ✅ | ✅ | `@PreAuthorize("isAuthenticated()")` |
+| 18| Đặt sân tại quầy (Khách vãng lai) | `POST /api/v1/bookings/pos` | ❌ | ❌ | ✅ | ✅ | `@PreAuthorize("hasAnyRole('STAFF', 'ADMIN')")` |
+| 19| Check-in khách vào sân | `POST /api/v1/bookings/{id}/check-in` | ❌ | ❌ | ✅ | ✅ | `@PreAuthorize("hasAnyRole('STAFF', 'ADMIN')")` |
+| 20| Hủy / Đổi lịch của mình | `PUT, DELETE /api/v1/bookings/{id}` | ❌ | ✅ | ✅ | ✅ | `@PreAuthorize("hasRole('ADMIN') or @bookingSecurity.isOwner(#id)")` |
+| 21| Đặt lịch cố định hàng tuần | `POST /api/v1/bookings/recurring` | ❌ | ✅ | ✅ | ✅ | Khách hàng thân thiết / Admin |
 | **V** | **Thanh toán & Khuyến mãi** | | | | | | *(Module 6 & 7)* |
-| 19| Thanh toán / Đặt cọc | `POST /api/v1/payments` | ❌ | ✅ | ✅ | ✅ | `@PreAuthorize("isAuthenticated()")` |
-| 20| Hoàn tiền hủy lịch | `POST /api/v1/payments/{id}/refund` | ❌ | ❌ | ✅ | ✅ | `@PreAuthorize("hasAnyRole('STAFF', 'ADMIN')")` |
-| 21| Quản lý Voucher khuyến mãi | `POST, PUT, DELETE /api/v1/vouchers` | ❌ | ❌ | ❌ | ✅ | `@PreAuthorize("hasRole('ADMIN')")` |
-| 22| Áp dụng Voucher vào đơn | `POST /api/v1/vouchers/apply` | ❌ | ✅ | ✅ | ✅ | Khách hàng áp mã khi thanh toán |
+| 22| Thanh toán / Đặt cọc | `POST /api/v1/payments` | ❌ | ✅ | ✅ | ✅ | `@PreAuthorize("isAuthenticated()")` |
+| 23| Hoàn tiền hủy lịch | `POST /api/v1/payments/{id}/refund` | ❌ | ❌ | ✅ | ✅ | `@PreAuthorize("hasAnyRole('STAFF', 'ADMIN')")` |
+| 24| Quản lý Voucher khuyến mãi | `POST, PUT, DELETE /api/v1/vouchers` | ❌ | ❌ | ❌ | ✅ | `@PreAuthorize("hasRole('ADMIN')")` |
+| 25| Áp dụng Voucher vào đơn | `POST /api/v1/vouchers/apply` | ❌ | ✅ | ✅ | ✅ | Khách hàng áp mã khi thanh toán |
 | **VI** | **Báo cáo (Dashboard)** | | | | | | *(Module 8)* |
-| 23| Doanh thu ngày/tuần/tháng | `GET /api/v1/reports/revenue` | ❌ | ❌ | ❌ | ✅ | `@PreAuthorize("hasRole('ADMIN')")` |
-| 24| Tỉ lệ lấp đầy sân (Occupancy) | `GET /api/v1/reports/occupancy` | ❌ | ❌ | ❌ | ✅ | `@PreAuthorize("hasRole('ADMIN')")` |
+| 26| Doanh thu ngày/tuần/tháng | `GET /api/v1/reports/revenue` | ❌ | ❌ | ❌ | ✅ | `@PreAuthorize("hasRole('ADMIN')")` |
+| 27| Tỉ lệ lấp đầy sân (Occupancy) | `GET /api/v1/reports/occupancy` | ❌ | ❌ | ❌ | ✅ | `@PreAuthorize("hasRole('ADMIN')")` |
 
 ---
 

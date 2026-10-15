@@ -40,7 +40,18 @@ public enum ErrorCode {
             HttpStatus.BAD_REQUEST),
     CANNOT_CREATE_ADMIN("CANNOT_CREATE_ADMIN",
             "Không được phép tạo tài khoản có vai trò Quản trị viên (ADMIN) qua API này", HttpStatus.BAD_REQUEST),
-    INVALID_ROLE("INVALID_ROLE", "Vai trò không hợp lệ trong hệ thống", HttpStatus.BAD_REQUEST);
+    INVALID_ROLE("INVALID_ROLE", "Vai trò không hợp lệ trong hệ thống", HttpStatus.BAD_REQUEST),
+
+    // Module 3 - Courts, TimeSlots & Pricing
+    COMPLEX_NOT_FOUND("COMPLEX_NOT_FOUND", "Không tìm thấy cụm sân trong hệ thống", HttpStatus.NOT_FOUND),
+    COURT_NOT_FOUND("COURT_NOT_FOUND", "Không tìm thấy sân cầu lông trong hệ thống", HttpStatus.NOT_FOUND),
+    TIMESLOT_NOT_FOUND("TIMESLOT_NOT_FOUND", "Không tìm thấy khung giờ trong hệ thống", HttpStatus.NOT_FOUND),
+    COMPLEX_HAS_COURTS("COMPLEX_HAS_COURTS", "Không thể xóa cụm sân đang có sân con bên trong", HttpStatus.BAD_REQUEST),
+    DUPLICATE_COURT_NAME("DUPLICATE_COURT_NAME", "Tên sân đã tồn tại trong cụm sân này", HttpStatus.CONFLICT),
+    DUPLICATE_COMPLEX_NAME("DUPLICATE_COMPLEX_NAME", "Tên cụm sân đã tồn tại trong hệ thống", HttpStatus.CONFLICT),
+    INVALID_TIME_RANGE("INVALID_TIME_RANGE", "Giờ bắt đầu phải trước giờ kết thúc", HttpStatus.BAD_REQUEST),
+    OVERLAPPING_TIME_SLOT("OVERLAPPING_TIME_SLOT", "Khung giờ bị trùng hoặc đè lên khung giờ đã tồn tại", HttpStatus.CONFLICT),
+    INVALID_SORT_FIELD("INVALID_SORT_FIELD", "Trường sắp xếp không hợp lệ", HttpStatus.BAD_REQUEST);
 
     private final String code;
     private final String message;
