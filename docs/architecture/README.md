@@ -5,40 +5,58 @@
 
 ---
 
-## 1. Sơ Đồ Kiến Trúc Phân Tầng (Layered Architecture)
+## 1. Sơ Đồ Kiến Trúc Hệ Thống (Package-by-Feature Architecture)
 
-Hệ thống được tổ chức phân tầng chặt chẽ dưới package `com.badminton`. Dữ liệu chỉ đi theo một chiều từ ngoài vào trong:
+Hệ thống được tổ chức theo mô hình **Package-by-Feature** kết hợp phân tầng nội bộ chặt chẽ dưới base package `com.badminton`. Cách tổ chức này giúp mã nguồn đạt tính gắn kết cao (High Cohesion), giảm thiểu phụ thuộc chéo (Low Coupling) và dễ dàng mở rộng theo từng module nghiệp vụ:
 
 ```
-[ Client / Web Frontend ]
-          │ HTTP Request (JSON)
-          ▼
-┌───────────────────────────────────────────────────────────┐
-│ com.badminton.controller                                  │
-│  - Chỉ nhận Request, Validate (@Valid), gọi Service       │
-│  - Trả về ApiResponse<DTO>, tuyệt đối KHÔNG có logic nặng │
-└─────────────────────────┬─────────────────────────────────┘
-                          │ DTO
-                          ▼
-┌───────────────────────────────────────────────────────────┐
-│ com.badminton.service                                     │
-│  - Interface + Impl: Chứa toàn bộ Business Logic          │
-│  - Quản lý biên giao dịch (@Transactional)                │
-│  - Gọi Mapper chuyển đổi Entity <-> DTO                   │
-└─────────────────────────┬─────────────────────────────────┘
-                          │ Entity / Query Params
-                          ▼
-┌───────────────────────────────────────────────────────────┐
-│ com.badminton.repository (Spring Data JPA)                │
-│  - Giao tiếp với Database qua Hibernate                   │
-│  - Tối ưu truy vấn bằng JPQL / DTO Projection             │
-└─────────────────────────┬─────────────────────────────────┘
-                          │ SQL
-                          ▼
-┌───────────────────────────────────────────────────────────┐
-│ Database (MySQL 8.x)                                      │
-└───────────────────────────────────────────────────────────┘
+src/main/java/com/badminton/
+├── modules/                                # Các miền nghiệp vụ độc lập (Feature Modules)
+│   ├── auth/                               # Module 1 & 2: Xác thực, JWT, Phân quyền & Quản lý User
+│   │   ├── AuthController.java
+│   │   ├── AdminUserController.java
+│   │   ├── entity/ (User, Role, RefreshToken, PasswordResetToken)
+│   │   ├── repository/ (UserRepository, RoleRepository, ...)
+│   │   ├── service/ (AuthService, UserService, ...)
+│   │   ├── dto/ (request/, response/)
+│   │   └── mapper/ (UserMapper)
+│   ├── court/                              # Module 3: Cụm sân, Sân con & Khung giờ bảng giá
+│   │   ├── CourtComplexController.java
+│   │   ├── CourtController.java
+│   │   ├── TimeSlotController.java
+│   │   ├── entity/ (CourtComplex, Court, TimeSlot, ComplexStatus, CourtStatus)
+│   │   ├── repository/ (CourtComplexRepository, CourtRepository, TimeSlotRepository)
+│   │   ├── service/ (CourtComplexService, CourtService, TimeSlotService)
+│   │   ├── dto/ (request/, response/)
+│   │   └── mapper/ (CourtComplexMapper, CourtMapper, TimeSlotMapper)
+│   └── booking/                            # Module 4: Đặt sân online & Kiểm soát xung đột
+│       ├── BookingController.java
+│       ├── entity/ (Booking, BookingStatus, SlotStatus)
+│       ├── repository/ (BookingRepository)
+│       ├── service/ (BookingService, BookingServiceImpl)
+│       ├── security/ (BookingSecurity)
+│       ├── dto/ (request/, response/)
+│       └── mapper/ (BookingMapper)
+├── security/                               # Cấu hình bảo mật, Bộ lọc JWT & Context Provider
+│   ├── SecurityConfig.java
+│   ├── SecurityUtils.java
+│   ├── jwt/ (JwtTokenProvider, JwtAuthenticationFilter, ...)
+│   └── userdetails/ (CustomUserDetails, CustomUserDetailsService)
+└── shared/                                 # Các thành phần tái sử dụng xuyên suốt hệ thống
+    ├── constant/ (RoleConstants, RoleType)
+    ├── exception/ (ErrorCode, AppException, GlobalExceptionHandler)
+    ├── response/ (ApiResponse, PageResponse)
+    ├── entity/ (BaseEntity)
+    ├── config/ (OpenApiConfig, CorsConfig)
+    └── util/ (SortUtils)
 ```
+
+### Luồng xử lý một Request (Request Lifecycle):
+1. **Client / Web Frontend:** Gửi HTTP Request (JSON) kèm JWT Bearer Token trong header.
+2. **Security Filter:** `JwtAuthenticationFilter` giải mã token, nạp Principal `CustomUserDetails` vào `SecurityContext`.
+3. **Controller (`modules.<feature>.*Controller`):** Nhận request, thực thi bean validation (`@Valid`), áp dụng method security (`@PreAuthorize`) và gọi interface Service. Controller chỉ trả về `ApiResponse<DTO>`, tuyệt đối không xử lý business logic nặng.
+4. **Service (`modules.<feature>.service`):** Chứa 100% nghiệp vụ, quản lý ranh giới giao dịch (`@Transactional`), thực thi các guards an toàn và gọi MapStruct Mapper để chuyển đổi Entity <-> DTO.
+5. **Repository (`modules.<feature>.repository`):** Giao tiếp với MySQL thông qua Spring Data JPA & Hibernate, tối ưu hóa câu lệnh bằng JPQL và Specification.
 
 ---
 
@@ -50,7 +68,7 @@ Hệ thống được tổ chức phân tầng chặt chẽ dưới package `com
 👉 **Đọc tại:** [`docs/architecture/rbac-matrix.md`](rbac-matrix.md)
 - Bảng danh mục các vai trò: `ROLE_ADMIN`, `ROLE_STAFF`, `ROLE_CUSTOMER`.
 - Bảng phân quyền chi tiết cho toàn bộ các API hiện tại và tương lai (Auth, Users, Courts, Bookings, Payments, Dashboard).
-- Quy chuẩn Method-Level Security bằng `@PreAuthorize("hasRole(...)")` với hằng số `RoleConstants`.
+- Quy chuẩn Method-Level Security bằng `@PreAuthorize("hasRole(...)")` với hằng số `RoleConstants` hoặc SpEL kiểm tra chủ sở hữu `@bookingSecurity.isOwner(#id)`.
 
 ### 📌 2. Triết Lý Thiết Kế SOLID & Chuẩn RESTful API
 👉 **Đọc tại:** [`docs/architecture/solid-design-principles.md`](solid-design-principles.md)
@@ -60,14 +78,15 @@ Hệ thống được tổ chức phân tầng chặt chẽ dưới package `com
 
 ### 📌 3. Tài Liệu Chi Tiết Từng Module (Modules Deep-Dive)
 Mỗi module đều có một tài liệu phân tích riêng biệt (bài toán giải quyết, cấu trúc code, phân tích chi tiết mức độ áp dụng SOLID):
-- 📘 **Module 1 (Auth & RBAC):** [`docs/architecture/modules/module-1-auth.md`](modules/module-1-auth.md) *(Áp dụng trọn vẹn 5/5 nguyên tắc SOLID)*.
-- 📘 **Module 2 (User Management & Role Assignment):** *(Sẽ tạo khi thực hiện Module 2)*.
-- 📘 **Module 3 (Courts, TimeSlots & Pricing):** *(Sẽ tạo khi thực hiện Module 3)*.
-- 📘 **Module 4 (Bookings & Concurrency Control):** *(Sẽ tạo khi thực hiện Module 4)*.
+- 📘 **Module 1 (Auth & RBAC):** [`docs/architecture/modules/module-1-auth.md`](modules/module-1-auth.md) *(Đã hoàn thành - Áp dụng trọn vẹn 5/5 nguyên tắc SOLID)*.
+- 📘 **Module 2 (User Management & Role Assignment):** [`docs/architecture/modules/module-2-user-management.md`](modules/module-2-user-management.md) *(Đã hoàn thành - Quản lý người dùng & 4 Guards bảo vệ Admin)*.
+- 📘 **Module 3 (Courts, TimeSlots & Pricing):** [`docs/architecture/modules/module-3-courts.md`](modules/module-3-courts.md) *(Đã hoàn thành - Cụm sân, Sân con, Khung giờ & Bảng giá chuẩn)*.
+- 📘 **Module 4 (Bookings & Concurrency Control):** [`docs/architecture/modules/module-4-bookings.md`](modules/module-4-bookings.md) *(Đã hoàn thành - Đặt sân online & Pessimistic Lock chống double-booking)*.
 
 ### 📌 4. Tài Liệu Tích Hợp API Cho Frontend
-👉 **Đọc tại:** [`docs/api/module-1-auth-rbac.md`](../api/module-1-auth-rbac.md)
-- Hướng dẫn Request body, URL, Response format và mẫu cấu hình Axios Interceptor cho Frontend Developer.
+- 👉 Module 1 (Auth): [`docs/api/module-1-auth-rbac.md`](../api/module-1-auth-rbac.md)
+- 👉 Module 3 (Courts & TimeSlots): [`docs/api/module-3-courts.md`](../api/module-3-courts.md)
+- 👉 Module 4 (Bookings): [`docs/api/module-4-bookings.md`](../api/module-4-bookings.md)
 
 ---
 
@@ -75,6 +94,7 @@ Mỗi module đều có một tài liệu phân tích riêng biệt (bài toán 
 
 Nếu bạn là một AI Agent đang tiếp nhận dự án này:
 1. **Luôn tuân thủ nguyên tắc Dependency Inversion:** Mọi Service injection phải qua constructor (dùng `@RequiredArgsConstructor`), tuyệt đối không dùng `@Autowired` trên field.
-2. **Không để lộ JPA Entity ra ngoài API:** Controller chỉ được phép nhận và trả về DTO. Sử dụng MapStruct (`com.badminton.mapper`) để chuyển đổi.
-3. **Mọi phản hồi API đều bọc qua `ApiResponse<T>`:** Không bao giờ trả raw Object hoặc raw ResponseEntity không có cấu trúc chuẩn.
+2. **Không để lộ JPA Entity ra ngoài API:** Controller chỉ được phép nhận và trả về DTO. Sử dụng MapStruct (trong package mapper của từng feature module) để chuyển đổi.
+3. **Mọi phản hồi API đều bọc qua `ApiResponse<T>`:** Không bao giờ trả raw Object hoặc raw ResponseEntity không có cấu trúc chuẩn; danh sách phân trang dùng `PageResponse<T>`.
 4. **Khi thêm tính năng mới:** Kiểm tra ma trận quyền tại [`rbac-matrix.md`](rbac-matrix.md) để gắn `@PreAuthorize` tương ứng trên Controller.
+5. **Sort ở các endpoint phân trang:** Bắt buộc validate qua `SortUtils.parseSort` với whitelist các trường cho phép, ngăn chặn lỗi 500 do client truyền field lạ.

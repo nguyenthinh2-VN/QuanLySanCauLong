@@ -51,7 +51,15 @@ public enum ErrorCode {
     DUPLICATE_COMPLEX_NAME("DUPLICATE_COMPLEX_NAME", "Tên cụm sân đã tồn tại trong hệ thống", HttpStatus.CONFLICT),
     INVALID_TIME_RANGE("INVALID_TIME_RANGE", "Giờ bắt đầu phải trước giờ kết thúc", HttpStatus.BAD_REQUEST),
     OVERLAPPING_TIME_SLOT("OVERLAPPING_TIME_SLOT", "Khung giờ bị trùng hoặc đè lên khung giờ đã tồn tại", HttpStatus.CONFLICT),
-    INVALID_SORT_FIELD("INVALID_SORT_FIELD", "Trường sắp xếp không hợp lệ", HttpStatus.BAD_REQUEST);
+    INVALID_SORT_FIELD("INVALID_SORT_FIELD", "Trường sắp xếp không hợp lệ", HttpStatus.BAD_REQUEST),
+
+    // Module 4 - Bookings & Concurrency Control
+    BOOKING_NOT_FOUND("BOOKING_NOT_FOUND", "Không tìm thấy thông tin đặt sân", HttpStatus.NOT_FOUND),
+    SLOT_ALREADY_BOOKED("SLOT_ALREADY_BOOKED", "Khung giờ này đã được đặt hoặc đang chờ thanh toán", HttpStatus.CONFLICT),
+    COURT_NOT_AVAILABLE("COURT_NOT_AVAILABLE", "Sân hiện đang bảo trì hoặc không khả dụng", HttpStatus.CONFLICT),
+    INVALID_BOOKING_DATE("INVALID_BOOKING_DATE", "Ngày đặt sân không hợp lệ (chỉ được đặt trong vòng 30 ngày tới)", HttpStatus.BAD_REQUEST),
+    BOOKING_NOT_CANCELLABLE("BOOKING_NOT_CANCELLABLE", "Không thể hủy đơn đặt sân ở trạng thái hiện tại hoặc đã quá giờ bắt đầu", HttpStatus.CONFLICT),
+    BOOKING_NOT_RESCHEDULABLE("BOOKING_NOT_RESCHEDULABLE", "Không thể đổi lịch đơn đặt sân ở trạng thái hiện tại hoặc đã quá giờ bắt đầu", HttpStatus.CONFLICT);
 
     private final String code;
     private final String message;

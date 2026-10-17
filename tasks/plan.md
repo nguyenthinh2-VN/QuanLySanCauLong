@@ -1,171 +1,130 @@
-# Implementation Plan: Module 3 - Courts, TimeSlots & Pricing
+# Implementation Plan: Module 4 - Bookings & Concurrency Control
 
 ## 1. Overview
-Module 3 chịu trách nhiệm quản lý cấu trúc cơ sở hạ tầng sân bãi cầu lông và chính sách giá theo khung giờ của hệ thống **QuanLySanCauLong**.
-Module bao gồm 3 resource chính:
-1. **Cụm sân (`CourtComplex`)**: Đại diện cho chi nhánh/cụm sân thực tế (ví dụ: Cụm sân Cầu Giấy, Cụm sân Thanh Xuân).
-2. **Sân con (`Court`)**: Các sân cầu lông cụ thể bên trong từng cụm sân (ví dụ: Sân 1, Sân 2, Sân VIP).
-3. **Khung giờ & Bảng giá (`TimeSlot`)**: Bảng giá thuê sân tính theo giờ theo các khung giờ trong ngày (toàn hệ thống áp dụng chung).
+Module 4 xây dựng luồng nghiệp vụ cốt lõi của hệ thống **QuanLySanCauLong**: **Đặt sân online dành cho khách hàng** kết hợp **Kiểm soát tương đồng / Chống đặt trùng slot (Concurrency & Double-Booking Control)**.
+Phạm vi Module 4 tập trung vào 5 REST API endpoints phục vụ khách hàng tra cứu slot trống theo thời gian thực, đặt sân trực tuyến, xem lịch sử đặt chỗ cá nhân, đổi lịch và hủy đặt sân trước giờ chơi.
 
-Hệ thống cung cấp 13 REST API endpoints theo đúng ma trận phân quyền RBAC (Khách vãng lai và người dùng có thể xem công khai; chỉ Admin có quyền thêm/sửa/xóa).
+Module 5 tiếp theo sẽ phụ trách các nghiệp vụ vận hành ngoại tuyến: Đặt sân tại quầy (POS), Check-in khách vào sân và Đặt lịch cố định hàng tuần.
 
 ---
 
 ## 2. Architecture & Design Decisions
 
-### 2.1. Phân tách Resource Cụm sân (`/api/v1/complexes`) và Sân con (`/api/v1/courts`)
-- **Vấn đề:** Trong ma trận RBAC ban đầu, CRUD cụm sân bị gộp chung vào đường dẫn `/api/v1/courts/**`. Tuy nhiên `CourtComplex` và `Court` có quan hệ cha - con (1 cụm có nhiều sân con). Đặt CRUD cụm sân dưới `/courts` là phản trực giác và phá vỡ nguyên tắc Resource-oriented của REST.
-- **Quyết định:** Tách thành 2 controller/resource độc lập:
-  - `/api/v1/complexes` quản lý Cụm sân.
-  - `/api/v1/courts` quản lý Sân con.
-  - Cập nhật ma trận RBAC (`docs/architecture/rbac-matrix.md`) và tài liệu kiến trúc để phản ánh chuẩn xác thiết kế này.
+### 2.1. Đơn vị đặt sân = 1 Khung giờ chuẩn (TimeSlot)
+- Khách đặt sân theo từng khung giờ cố định (`courtId`, `bookingDate`, `timeSlotId`). Không chia nhỏ giờ lẻ trong một khung giờ.
+- **Lý do thiết kế:** Đơn giá thuê sân đã được cấu hình theo từng khung giờ tại Module 3. Đặt theo khung giờ chuẩn giúp đồng nhất bảng giá, thuận tiện hiển thị trên giao diện người dùng (Matrix Lịch trống) và tránh tạo ra các khoảng thời gian trống vụn vặt (30 phút, 15 phút) không thể cho thuê. Nghiệp vụ thuê giờ lẻ linh hoạt được dành riêng làm phần mở rộng trong tương lai.
 
-### 2.2. Quan hệ và Unique Constraints
-- **Cụm sân (`CourtComplex`):** `name` là UNIQUE trên toàn hệ thống (`@Column(unique = true, nullable = false, length = 150)`).
-- **Sân con (`Court`):** Tên sân (ví dụ: "Sân 1") được phép trùng nhau giữa các cụm sân khác nhau, nhưng **tuyệt đối không được trùng nhau trong cùng một cụm sân**.
-  - Áp dụng Unique Constraint tổ hợp ở tầng Database:
-    `@Table(name = "courts", uniqueConstraints = @UniqueConstraint(name = "uk_court_complex_name", columnNames = {"complex_id", "name"}))`
-  - Kèm guard kiểm tra chủ động ở tầng Service: `existsByComplexIdAndName(complexId, name)` ném `AppException(ErrorCode.DUPLICATE_COURT_NAME)` (HTTP 409).
+### 2.2. Kiểm soát xung đột đặt chỗ bằng Pessimistic Write Lock thay vì Unique Constraint
+- **Vấn đề:** Khi khách hủy đặt sân (`DELETE /api/v1/bookings/{id}`), hệ thống thực hiện Soft-Cancel (chuyển trạng thái sang `CANCELLED`) để bảo lưu lịch sử đơn hàng phục vụ kế toán, giải trình và audit. Do đó, trong bảng `bookings` có thể tồn tại nhiều bản ghi có cùng `(court_id, booking_date, time_slot_id)` nếu các đơn trước đã bị hủy.
+- **Hạn chế của Unique Constraint:** Ràng buộc `UNIQUE(court_id, booking_date, time_slot_id)` ở tầng Database sẽ ngăn cản việc khách khác đặt lại vào slot vừa được hủy, hoặc buộc phải xóa cứng (Hard Delete) bản ghi làm mất dấu vết kiểm toán.
+- **Giải pháp:** Sử dụng **Pessimistic Write Lock (`LockModeType.PESSIMISTIC_WRITE`)** trên bản ghi `Court` mục tiêu trong cùng một `@Transactional`:
+  ```java
+  // Bước 1: Khóa dòng Sân để tuần tự hóa các yêu cầu đồng thời
+  Court court = courtRepository.findByIdForUpdate(courtId)
+          .orElseThrow(() -> new AppException(ErrorCode.COURT_NOT_FOUND));
 
-### 2.3. Khung giờ & Bảng giá (`TimeSlot`) - Global Pricing Policy
-- `TimeSlot` không lưu FK tới `CourtComplex` hay `Court`, áp dụng thống nhất cho toàn bộ hệ thống (dễ quản lý, phù hợp nghiệp vụ sân cầu lông thông dụng).
-- **Thuật toán kiểm tra trùng/đè khung giờ (Overlapping Guard):**
-  Hai khoảng thời gian `[A_start, A_end)` và `[B_start, B_end)` overlap khi và chỉ khi:
-  `A_start < B_end AND A_end > B_start`.
-  - Thực thi kiểm tra trực tiếp qua Database query để đảm bảo hiệu năng và tính nhất quán cao.
-  - Trùng lặp -> ném `AppException(ErrorCode.OVERLAPPING_TIME_SLOT)` (HTTP 409).
-  - Validation: `startTime < endTime` (sai -> 400 `INVALID_TIME_RANGE`), `pricePerHour >= 0` (sai -> 400 `BAD_REQUEST`).
-- **Không hỗ trợ Hard Delete Khung giờ:** Tránh làm hỏng lịch sử đơn đặt sân (Module 4 sau này). Muốn ngừng áp dụng, Admin cập nhật giá về 0 hoặc đổi tên khung giờ.
+  // Bước 2: Kiểm tra xem slot đã có booking nào ở trạng thái PENDING, CONFIRMED, CHECKED_IN chưa
+  if (bookingRepository.existsActiveBooking(courtId, bookingDate, timeSlotId)) {
+      throw new AppException(ErrorCode.SLOT_ALREADY_BOOKED);
+  }
+  ```
+  Khi 2 khách hàng gửi request đặt cùng 1 slot tại cùng 1 tích tắc, transaction thứ 2 sẽ phải chờ lock. Sau khi transaction thứ nhất commit giữ chỗ thành công, transaction thứ hai đọc lại dữ liệu và lập tức nhận phản hồi **HTTP 409 Conflict (`SLOT_ALREADY_BOOKED`)**.
 
-### 2.4. Phân Quyền & Bảo Mật (Security & RBAC)
-- **Method-level Security:** Sử dụng SpEL trích xuất từ hằng số:
-  `@PreAuthorize("hasRole(T(com.badminton.shared.constant.RoleConstants).ADMIN)")`
-  cho toàn bộ thao tác ghi (POST, PUT, DELETE). Cấm hard-code chuỗi `"ADMIN"`.
-- **Public Endpoints (permitAll):**
-  Cấu hình tại `SecurityConfig.java`:
-  - `HttpMethod.GET, "/api/v1/complexes/**"`
-  - `HttpMethod.GET, "/api/v1/courts/**"`
-  - `HttpMethod.GET, "/api/v1/time-slots/**"`
-  cho phép khách vãng lai (không cần token) xem danh sách và chi tiết sân bãi, giá cả.
+### 2.3. Snapshot giá tiền (`totalAmount`) tại thời điểm tạo đơn
+- Khi đơn đặt sân được tạo, hệ thống tự động tính toán:
+  $$\text{totalAmount} = \text{pricePerHour của TimeSlot} \times \text{thời lượng khung giờ (tính theo giờ)}$$
+  *(Ví dụ: Khung 16:00–21:00 có thời lượng 5 giờ, đơn giá 150.000 VNĐ/giờ $\rightarrow$ totalAmount = 750.000 VNĐ).*
+- Giá trị này được lưu cố định (snapshot) vào cột `total_amount` của bảng `bookings`. Sau này dù Quản trị viên có thay đổi bảng giá của khung giờ đó, giá trị các đơn đặt sân trong quá khứ vẫn được bảo toàn nguyên vẹn, đảm bảo tính chuẩn xác cho hóa đơn và báo cáo doanh thu (Module 6 & 8).
 
-### 2.5. Sort Whitelist Validation (Chống lỗi 500 khi Client gửi sort bừa)
-- Mọi endpoint GET có phân trang sẽ validate field sắp xếp dựa trên whitelist của từng entity (`ComplexSortFields`, `CourtSortFields`).
-- Nếu field không nằm trong whitelist -> ném `AppException(ErrorCode.INVALID_SORT_FIELD, "Trường sắp xếp không hợp lệ: " + field)` trả về HTTP 400 thay vì để Hibernate văng lỗi 500.
+### 2.4. Trạng thái Đặt sân & Quy trình Giữ chỗ (Booking Lifecycle)
+- Khi đặt sân online thành công (`POST /api/v1/bookings`), đơn hàng mang trạng thái mặc định: **`PENDING`** (Đang chờ thanh toán).
+- Slot ở trạng thái `PENDING` được tính là **đã bị chiếm chỗ** (được hiển thị `BOOKED` trên màn hình tra cứu), ngăn không cho khách khác đặt đè.
+- **Module 6 (Payments)** sẽ lắng nghe hoặc tích hợp để chuyển trạng thái sang `CONFIRMED` khi khách thanh toán thành công, hoặc giải phóng slot nếu quá hạn thanh toán.
+- Khách chỉ được phép đổi lịch (`PUT`) hoặc hủy lịch (`DELETE`) khi đơn ở trạng thái `PENDING` hoặc `CONFIRMED`, và **thời điểm hiện tại phải trước thời gian bắt đầu của khung giờ đã đặt**.
+
+### 2.5. Bảo mật Phân quyền Chủ sở hữu qua SpEL (`@bookingSecurity.isOwner(#id)`)
+- Đối với các thao tác nhạy cảm trên từng booking (`PUT`, `DELETE`):
+  `@PreAuthorize("hasRole(T(com.badminton.shared.constant.RoleConstants).ADMIN) or @bookingSecurity.isOwner(#id)")`
+- Component `BookingSecurity` đối chiếu ID người dùng hiện tại trong Security Context (`SecurityUtils.getCurrentUserId()`) với chủ sở hữu của booking. Nếu booking không tồn tại hoặc không thuộc quyền sở hữu của user, method trả về `false`, Spring Security sẽ chặn lại với **HTTP 403 Forbidden** trước khi logic service được thực thi, đảm bảo không làm lộ thông tin tồn tại của bản ghi.
 
 ---
 
-## 3. Danh Mục 13 REST API Endpoints
+## 3. Danh Mục 5 REST API Endpoints
 
 | # | HTTP Method | Endpoint URI | Quyền hạn | Mô tả |
 |---|---|---|---|---|
-| **A** | **CỤM SÂN (CourtComplex)** | | | |
-| 1 | `GET` | `/api/v1/complexes` | Public | Danh sách cụm sân (phân trang, search `q`, filter `status`) |
-| 2 | `GET` | `/api/v1/complexes/{id}` | Public | Chi tiết 1 cụm sân kèm danh sách sân con tóm tắt |
-| 3 | `POST` | `/api/v1/complexes` | `ROLE_ADMIN` | Tạo mới cụm sân (201 Created) |
-| 4 | `PUT` | `/api/v1/complexes/{id}` | `ROLE_ADMIN` | Cập nhật thông tin cụm sân |
-| 5 | `DELETE` | `/api/v1/complexes/{id}` | `ROLE_ADMIN` | Xóa cụm sân (Guard: còn sân con -> 400) |
-| **B** | **SÂN CON (Court)** | | | |
-| 6 | `GET` | `/api/v1/courts` | Public | Danh sách sân con (phân trang, filter `complexId`, `status`, `q`) |
-| 7 | `GET` | `/api/v1/courts/{id}` | Public | Chi tiết 1 sân con |
-| 8 | `POST` | `/api/v1/courts` | `ROLE_ADMIN` | Tạo sân con trong cụm (Guard: trùng tên cùng cụm -> 409) |
-| 9 | `PUT` | `/api/v1/courts/{id}` | `ROLE_ADMIN` | Cập nhật thông tin sân con |
-| 10 | `DELETE` | `/api/v1/courts/{id}` | `ROLE_ADMIN` | Xóa sân con |
-| **C** | **KHUNG GIỜ & BẢNG GIÁ (TimeSlot)** | | | |
-| 11 | `GET` | `/api/v1/time-slots` | Public | Danh sách khung giờ & giá (sắp xếp theo `startTime` tăng dần) |
-| 12 | `POST` | `/api/v1/time-slots` | `ROLE_ADMIN` | Tạo khung giờ (Guard: start < end, không overlap, price >= 0) |
-| 13 | `PUT` | `/api/v1/time-slots/{id}` | `ROLE_ADMIN` | Cập nhật khung giờ (áp dụng cùng các guards) |
+| 1 | `GET` | `/api/v1/bookings/availability` | Public (permitAll) | Xem ma trận slot trống theo ngày (`date` bắt buộc, `courtId` / `complexId` tùy chọn). Trả về trạng thái từng slot: `FREE`, `BOOKED`, `PASSED`, `UNAVAILABLE`. |
+| 2 | `POST` | `/api/v1/bookings` | Authenticated | Đặt sân online cho chính mình. Body: `{courtId, bookingDate, timeSlotId, note?}`. Trả về 201 Created, status = `PENDING`. |
+| 3 | `GET` | `/api/v1/bookings/my` | Authenticated | Lịch sử đặt sân của user hiện tại (phân trang, sort whitelist: `bookingDate`, `createdAt`, `totalAmount`, lọc theo `status`, `fromDate`, `toDate`). |
+| 4 | `PUT` | `/api/v1/bookings/{id}` | Owner hoặc Admin | Đổi lịch đặt sân (court, date, timeSlot, note). Guards: status ∈ {PENDING, CONFIRMED}, trước giờ bắt đầu, slot mới phải trống, tính lại `totalAmount`. |
+| 5 | `DELETE` | `/api/v1/bookings/{id}` | Owner hoặc Admin | Hủy lịch đặt sân (Soft-Cancel: chuyển status sang `CANCELLED`). Guards: status ∈ {PENDING, CONFIRMED}, trước giờ bắt đầu. |
 
 ---
 
 ## 4. Cấu Trúc File & Package Tổ Chức
 
 ```
-src/main/java/com/badminton/modules/court/
-├── CourtComplexController.java            # REST API cho Cụm sân (/api/v1/complexes)
-├── CourtController.java                   # REST API cho Sân con (/api/v1/courts)
-├── TimeSlotController.java                # REST API cho Khung giờ (/api/v1/time-slots)
+src/main/java/com/badminton/modules/booking/
+├── BookingController.java                 # REST Controller chứa 5 endpoints
 ├── entity/
-│   ├── CourtComplex.java                  # Entity cụm sân
-│   ├── Court.java                         # Entity sân con
-│   ├── TimeSlot.java                      # Entity khung giờ & bảng giá
-│   ├── ComplexStatus.java                 # Enum: ACTIVE, INACTIVE
-│   └── CourtStatus.java                   # Enum: AVAILABLE, MAINTENANCE
+│   ├── Booking.java                       # Entity đơn đặt sân (table: bookings)
+│   ├── BookingStatus.java                 # Enum: PENDING, CONFIRMED, CHECKED_IN, COMPLETED, CANCELLED
+│   └── SlotStatus.java                    # Enum trạng thái hiển thị: FREE, BOOKED, PASSED, UNAVAILABLE
 ├── repository/
-│   ├── CourtComplexRepository.java        # Repository + JpaSpecificationExecutor
-│   ├── CourtRepository.java               # Repository + JpaSpecificationExecutor
-│   └── TimeSlotRepository.java            # Repository kiểm tra overlap khung giờ
+│   └── BookingRepository.java             # JPA Repository, truy vấn kiểm tra trùng slot & availability
 ├── dto/
 │   ├── request/
-│   │   ├── CreateComplexRequest.java
-│   │   ├── UpdateComplexRequest.java
-│   │   ├── CreateCourtRequest.java
-│   │   ├── UpdateCourtRequest.java
-│   │   ├── CreateTimeSlotRequest.java
-│   │   └── UpdateTimeSlotRequest.java
+│   │   ├── CreateBookingRequest.java      # courtId, bookingDate, timeSlotId, note
+│   │   └── UpdateBookingRequest.java      # courtId?, bookingDate?, timeSlotId?, note?
 │   └── response/
-│       ├── ComplexResponse.java
-│       ├── ComplexDetailResponse.java
-│       ├── CourtSummaryResponse.java
-│       ├── CourtResponse.java
-│       └── TimeSlotResponse.java
+│       ├── BookingResponse.java           # DTO trả về chi tiết đơn đặt sân
+│       ├── CourtAvailabilityResponse.java # Danh sách slot theo từng sân
+│       └── SlotAvailabilityResponse.java  # Chi tiết trạng thái của 1 slot
 ├── mapper/
-│   ├── CourtComplexMapper.java
-│   ├── CourtMapper.java
-│   └── TimeSlotMapper.java
+│   └── BookingMapper.java                 # MapStruct chuyển đổi Entity <-> DTO
+├── security/
+│   └── BookingSecurity.java               # Component kiểm tra quyền sở hữu đơn đặt sân
 └── service/
-    ├── CourtComplexService.java
-    ├── CourtService.java
-    ├── TimeSlotService.java
+    ├── BookingService.java                # Interface nghiệp vụ đặt sân
     └── impl/
-        ├── CourtComplexServiceImpl.java
-        ├── CourtServiceImpl.java
-        └── TimeSlotServiceImpl.java
+        └── BookingServiceImpl.java        # Triển khai nghiệp vụ kèm Pessimistic Lock & Guards
 ```
 
 ---
 
 ## 5. Các Bước Triển Khai (Phases)
 
-- **Phase 1: Foundation & Shared Updates**
-  - Mở rộng `ErrorCode` với các mã lỗi mới của Module 3 (`COMPLEX_NOT_FOUND`, `COURT_NOT_FOUND`, `TIMESLOT_NOT_FOUND`, `COMPLEX_HAS_COURTS`, `DUPLICATE_COURT_NAME`, `DUPLICATE_COMPLEX_NAME`, `INVALID_TIME_RANGE`, `OVERLAPPING_TIME_SLOT`, `INVALID_SORT_FIELD`).
-  - Cập nhật `SecurityConfig` mở quyền truy cập `permitAll` cho các endpoint `GET /api/v1/complexes/**`, `GET /api/v1/courts/**`, `GET /api/v1/time-slots/**`.
-  - Tạo Helper tiện ích kiểm tra Whitelist Sort field.
+- **Phase 1: Hạ tầng kiểm thử H2, Error Codes & SecurityConfig**
+  - Thêm dependency `com.h2database:h2` (scope test) vào `pom.xml`.
+  - Mở rộng `ErrorCode.java` với 6 mã lỗi mới: `BOOKING_NOT_FOUND`, `SLOT_ALREADY_BOOKED`, `COURT_NOT_AVAILABLE`, `INVALID_BOOKING_DATE`, `BOOKING_NOT_CANCELLABLE`, `BOOKING_NOT_RESCHEDULABLE`.
+  - Bổ sung cấu hình `permitAll` cho `GET /api/v1/bookings/availability` trong `SecurityConfig.java`.
+  - Bổ sung method `findByIdForUpdate(Long id)` với `@Lock(LockModeType.PESSIMISTIC_WRITE)` vào `CourtRepository`.
 
-- **Phase 2: CourtComplex Subsystem**
-  - Tạo Entity `CourtComplex`, Enum `ComplexStatus`.
-  - Tạo Repository `CourtComplexRepository` hỗ trợ Specification.
-  - Tạo DTOs (`CreateComplexRequest`, `UpdateComplexRequest`, `ComplexResponse`, `ComplexDetailResponse`).
-  - Tạo MapStruct Mapper `CourtComplexMapper`.
-  - Viết Service `CourtComplexService` & `CourtComplexServiceImpl` (kèm guard chống xóa khi còn sân con).
-  - Viết `CourtComplexController` với đầy đủ Swagger OpenAPI & Security annotations.
+- **Phase 2: Domain Entity, Repository, DTOs & Mappers**
+  - Tạo Entity `Booking`, Enums `BookingStatus`, `SlotStatus`.
+  - Tạo DTOs request/response có đầy đủ bean validation.
+  - Tạo MapStruct `BookingMapper` (tắt builder để tương thích `BaseEntity`).
+  - Tạo `BookingRepository` với các JPQL query tìm slot trùng và query lịch sử đặt sân.
 
-- **Phase 3: Court Subsystem**
-  - Tạo Entity `Court`, Enum `CourtStatus` (với unique constraint `uk_court_complex_name`).
-  - Tạo Repository `CourtRepository` hỗ trợ đếm số sân theo cụm và kiểm tra trùng tên trong cùng cụm.
-  - Tạo DTOs (`CreateCourtRequest`, `UpdateCourtRequest`, `CourtResponse`, `CourtSummaryResponse`).
-  - Tạo MapStruct Mapper `CourtMapper`.
-  - Viết Service `CourtService` & `CourtServiceImpl` (kèm guard check cụm tồn tại, trùng tên sân trong cụm).
-  - Viết `CourtController` với đầy đủ Swagger OpenAPI & Security annotations.
+- **Phase 3: Security Component & Core Booking Service**
+  - Tạo `BookingSecurity` với method `isOwner(Long bookingId)`.
+  - Tạo `BookingService` và triển khai `BookingServiceImpl`:
+    - Đặt sân online với Pessimistic Lock và snapshot `totalAmount`.
+    - Lấy lịch sử đặt sân của user hiện tại với `SortUtils` whitelist validation.
+    - Đổi lịch (`PUT`) và Hủy lịch (`DELETE`) kèm các guards kiểm tra trạng thái và thời gian cutoff.
 
-- **Phase 4: TimeSlot Subsystem**
-  - Tạo Entity `TimeSlot`.
-  - Tạo Repository `TimeSlotRepository` với query check overlap intervals.
-  - Tạo DTOs (`CreateTimeSlotRequest`, `UpdateTimeSlotRequest`, `TimeSlotResponse`).
-  - Tạo MapStruct Mapper `TimeSlotMapper`.
-  - Viết Service `TimeSlotService` & `TimeSlotServiceImpl` (kèm các guards: start < end, overlap check, price >= 0).
-  - Viết `TimeSlotController` với đầy đủ Swagger OpenAPI & Security annotations.
+- **Phase 4: Availability Service & REST Controller**
+  - Triển khai thuật toán tính toán trạng thái slot (`FREE`, `BOOKED`, `PASSED`, `UNAVAILABLE`) cho từng sân con theo ngày.
+  - Tạo `BookingController` với đầy đủ 5 endpoints và tài liệu Swagger OpenAPI `@Tag(name = "Bookings")`.
 
-- **Phase 5: Seeder & Verification**
-  - Cập nhật `DataSeeder` để seed dữ liệu mẫu: 2 Cụm sân, mỗi cụm 3-4 sân con, 4 khung giờ chuẩn trong ngày (Sáng sớm, Sáng, Chiều, Tối).
-  - Viết Unit Tests kiểm thử các guards quan trọng: Overlap TimeSlot, Duplicate Court Name cùng cụm, Delete Complex có sân con.
-  - Biên dịch toàn bộ dự án (`mvnw clean compile`) và chạy tests (`mvnw test`).
+- **Phase 5: Kiểm Thử Toàn Diện (Unit Test, DataJpaTest & Concurrency Test)**
+  - Viết `BookingRepositoryDataJpaTest` chạy trên H2 thật kiểm thử các câu query kiểm tra xung đột slot.
+  - Viết `BookingConcurrencyTest` mô phỏng 2 threads đồng thời đặt cùng 1 slot để kiểm chứng Pessimistic Lock (đúng 1 thread nhận 201, thread còn lại nhận 409).
+  - Viết `BookingServiceTest` bao quát toàn bộ các guards nghiệp vụ (ngày quá khứ, sân bảo trì, đổi lịch quá giờ bắt đầu, hủy lịch).
+  - Chạy `.\mvnw.cmd clean test` đảm bảo 100% tests pass.
 
-- **Phase 6: Đồng Bộ Tài Liệu Dự Án**
-  - Tạo `docs/api/module-3-courts.md` (đủ mẫu request/response 13 endpoints và các case lỗi 400, 401, 403, 404, 409).
-  - Tạo `docs/architecture/modules/module-3-courts.md` (mô tả kiến trúc + bảng phân tích SOLID).
-  - Cập nhật `docs/architecture/architecture-and-rbac.md` (sửa 2 dòng trạng thái Module 2 & Module 3).
-  - Cập nhật `docs/architecture/rbac-matrix.md` (khớp thiết kế tách Cụm sân và Sân con).
-
-- **Phase 7: Kế Hoạch & Báo Cáo Kiểm Thử Toàn Diện**
-  - Xem chi tiết tại [tasks/test-plan.md](file:///e:/QuanLySanCauLong/tasks/test-plan.md): Báo cáo 48/48 tests PASS 100%, ma trận test cases, phân tích guards nghiệp vụ và kết quả audit qua `open-code-review-delegate`.
-
+- **Phase 6: Đồng Bộ Hệ Thống Tài Liệu**
+  - Tạo `docs/api/module-4-bookings.md`: Đầy đủ request/response cho cả 5 endpoints và các mã lỗi (400, 401, 403, 404, 409).
+  - Tạo `docs/architecture/modules/module-4-bookings.md`: Phân tích bài toán, kiến trúc, áp dụng SOLID và giải thích các quyết định thiết kế.
+  - Cập nhật `docs/architecture/README.md`: Cập nhật trạng thái Module 2, 3, 4 và chuẩn hóa toàn bộ sơ đồ phân tầng sang package-by-feature.
+  - Cập nhật `docs/architecture/rbac-matrix.md`: Bổ sung dòng `GET /api/v1/bookings/my`.

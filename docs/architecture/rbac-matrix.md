@@ -45,10 +45,11 @@ Hệ thống sử dụng enum `RoleType` lưu trong bảng `roles`, quan hệ Ma
 | **IV** | **Đặt sân (Bookings)** | | | | | | *(Module 4 & 5)* |
 | 16| Xem slot sân trống | `GET /api/v1/bookings/availability` | ✅ | ✅ | ✅ | ✅ | `permitAll` (Cho phép khách tìm giờ trống) |
 | 17| Đặt sân online | `POST /api/v1/bookings` | ❌ | ✅ | ✅ | ✅ | `@PreAuthorize("isAuthenticated()")` |
-| 18| Đặt sân tại quầy (Khách vãng lai) | `POST /api/v1/bookings/pos` | ❌ | ❌ | ✅ | ✅ | `@PreAuthorize("hasAnyRole('STAFF', 'ADMIN')")` |
-| 19| Check-in khách vào sân | `POST /api/v1/bookings/{id}/check-in` | ❌ | ❌ | ✅ | ✅ | `@PreAuthorize("hasAnyRole('STAFF', 'ADMIN')")` |
-| 20| Hủy / Đổi lịch của mình | `PUT, DELETE /api/v1/bookings/{id}` | ❌ | ✅ | ✅ | ✅ | `@PreAuthorize("hasRole('ADMIN') or @bookingSecurity.isOwner(#id)")` |
-| 21| Đặt lịch cố định hàng tuần | `POST /api/v1/bookings/recurring` | ❌ | ✅ | ✅ | ✅ | Khách hàng thân thiết / Admin |
+| 18| Xem lịch sử đặt sân của mình | `GET /api/v1/bookings/my` | ❌ | ✅ | ✅ | ✅ | `@PreAuthorize("isAuthenticated()")` (Chỉ xem booking của chính mình) |
+| 19| Đặt sân tại quầy (Khách vãng lai) | `POST /api/v1/bookings/pos` | ❌ | ❌ | ✅ | ✅ | `@PreAuthorize("hasAnyRole('STAFF', 'ADMIN')")` |
+| 20| Check-in khách vào sân | `POST /api/v1/bookings/{id}/check-in` | ❌ | ❌ | ✅ | ✅ | `@PreAuthorize("hasAnyRole('STAFF', 'ADMIN')")` |
+| 21| Hủy / Đổi lịch của mình | `PUT, DELETE /api/v1/bookings/{id}` | ❌ | ✅ | ✅ | ✅ | `@PreAuthorize("hasRole('ADMIN') or @bookingSecurity.isOwner(#id)")` |
+| 22| Đặt lịch cố định hàng tuần | `POST /api/v1/bookings/recurring` | ❌ | ✅ | ✅ | ✅ | Khách hàng thân thiết / Admin |
 | **V** | **Thanh toán & Khuyến mãi** | | | | | | *(Module 6 & 7)* |
 | 22| Thanh toán / Đặt cọc | `POST /api/v1/payments` | ❌ | ✅ | ✅ | ✅ | `@PreAuthorize("isAuthenticated()")` |
 | 23| Hoàn tiền hủy lịch | `POST /api/v1/payments/{id}/refund` | ❌ | ❌ | ✅ | ✅ | `@PreAuthorize("hasAnyRole('STAFF', 'ADMIN')")` |

@@ -54,10 +54,11 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/swagger-ui.html")
                         .permitAll()
-                        // Public endpoints for viewing courts, complexes and pricing
+                        // Public endpoints for viewing courts, complexes, pricing and availability
                         .requestMatchers(HttpMethod.GET, "/api/v1/complexes/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/courts/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/time-slots/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/bookings/availability").permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 

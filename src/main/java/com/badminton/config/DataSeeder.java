@@ -135,9 +135,12 @@ public class DataSeeder implements CommandLineRunner {
                 .build();
         courtComplexRepository.save(complex1);
 
-        Court court11 = Court.builder().complex(complex1).name("Sân 1 (Thảm Victor)").status(CourtStatus.AVAILABLE).build();
-        Court court12 = Court.builder().complex(complex1).name("Sân 2 (Thảm Yonex)").status(CourtStatus.AVAILABLE).build();
-        Court court13 = Court.builder().complex(complex1).name("Sân 3 (Thảm Lining VIP)").status(CourtStatus.AVAILABLE).build();
+        Court court11 = Court.builder().complex(complex1).name("Sân 1 (Thảm Victor)").status(CourtStatus.AVAILABLE)
+                .build();
+        Court court12 = Court.builder().complex(complex1).name("Sân 2 (Thảm Yonex)").status(CourtStatus.AVAILABLE)
+                .build();
+        Court court13 = Court.builder().complex(complex1).name("Sân 3 (Thảm Lining VIP)").status(CourtStatus.AVAILABLE)
+                .build();
         courtRepository.saveAll(List.of(court11, court12, court13));
 
         // Cụm sân 2: Thanh Xuân
@@ -149,9 +152,12 @@ public class DataSeeder implements CommandLineRunner {
                 .build();
         courtComplexRepository.save(complex2);
 
-        Court court21 = Court.builder().complex(complex2).name("Sân 1 (Thảm Victor)").status(CourtStatus.AVAILABLE).build();
-        Court court22 = Court.builder().complex(complex2).name("Sân 2 (Thảm Yonex)").status(CourtStatus.AVAILABLE).build();
-        Court court23 = Court.builder().complex(complex2).name("Sân 3 (Đang bảo trì)").status(CourtStatus.MAINTENANCE).build();
+        Court court21 = Court.builder().complex(complex2).name("Sân 1 (Thảm Victor)").status(CourtStatus.AVAILABLE)
+                .build();
+        Court court22 = Court.builder().complex(complex2).name("Sân 2 (Thảm Yonex)").status(CourtStatus.AVAILABLE)
+                .build();
+        Court court23 = Court.builder().complex(complex2).name("Sân 3 (Đang bảo trì)").status(CourtStatus.MAINTENANCE)
+                .build();
         courtRepository.saveAll(List.of(court21, court22, court23));
 
         log.info("Khởi tạo thành công 2 Cụm sân mẫu và 6 Sân con");
@@ -186,8 +192,7 @@ public class DataSeeder implements CommandLineRunner {
                         .startTime(LocalTime.of(21, 0))
                         .endTime(LocalTime.of(23, 0))
                         .pricePerHour(new BigDecimal("120000"))
-                        .build()
-        );
+                        .build());
 
         timeSlotRepository.saveAll(slots);
         log.info("Khởi tạo thành công 4 Khung giờ & Bảng giá chuẩn");
