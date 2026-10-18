@@ -59,7 +59,13 @@ public enum ErrorCode {
     COURT_NOT_AVAILABLE("COURT_NOT_AVAILABLE", "Sân hiện đang bảo trì hoặc không khả dụng", HttpStatus.CONFLICT),
     INVALID_BOOKING_DATE("INVALID_BOOKING_DATE", "Ngày đặt sân không hợp lệ (chỉ được đặt trong vòng 30 ngày tới)", HttpStatus.BAD_REQUEST),
     BOOKING_NOT_CANCELLABLE("BOOKING_NOT_CANCELLABLE", "Không thể hủy đơn đặt sân ở trạng thái hiện tại hoặc đã quá giờ bắt đầu", HttpStatus.CONFLICT),
-    BOOKING_NOT_RESCHEDULABLE("BOOKING_NOT_RESCHEDULABLE", "Không thể đổi lịch đơn đặt sân ở trạng thái hiện tại hoặc đã quá giờ bắt đầu", HttpStatus.CONFLICT);
+    BOOKING_NOT_RESCHEDULABLE("BOOKING_NOT_RESCHEDULABLE", "Không thể đổi lịch đơn đặt sân ở trạng thái hiện tại hoặc đã quá giờ bắt đầu", HttpStatus.CONFLICT),
+
+    // Module 5 - Court Operations (POS, Check-in & Recurring)
+    INVALID_POS_REQUEST("INVALID_POS_REQUEST", "Yêu cầu đặt sân tại quầy không hợp lệ (chỉ chọn một trong hai: có tài khoản hoặc khách lẻ)", HttpStatus.BAD_REQUEST),
+    CHECK_IN_NOT_ALLOWED("CHECK_IN_NOT_ALLOWED", "Không thể check-in đơn đặt sân ở trạng thái hiện tại hoặc không đúng ngày/giờ", HttpStatus.CONFLICT),
+    RECURRING_SLOT_CONFLICT("RECURRING_SLOT_CONFLICT", "Một số ngày trong chuỗi đặt lặp đã bị trùng hoặc đã có người đặt", HttpStatus.CONFLICT),
+    RECURRING_HORIZON_EXCEEDED("RECURRING_HORIZON_EXCEEDED", "Chuỗi ngày đặt lặp vượt quá giới hạn tối đa 90 ngày kể từ hôm nay", HttpStatus.BAD_REQUEST);
 
     private final String code;
     private final String message;

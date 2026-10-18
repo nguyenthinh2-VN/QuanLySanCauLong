@@ -23,6 +23,8 @@ public class BookingResponse {
     private Long userId;
     private String userFullName;
     private String userEmail;
+    private String guestName;
+    private String guestPhone;
     private Long courtId;
     private String courtName;
     private Long complexId;

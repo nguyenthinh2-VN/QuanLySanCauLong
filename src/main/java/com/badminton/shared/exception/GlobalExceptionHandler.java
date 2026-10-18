@@ -25,7 +25,9 @@ public class GlobalExceptionHandler {
         ErrorCode errorCode = ex.getErrorCode();
         log.warn("Nghiệp vụ trả lỗi [{}]: {}", errorCode.getCode(), ex.getMessage());
 
-        ApiResponse<Void> response = ApiResponse.error(errorCode.getCode(), ex.getMessage());
+        ApiResponse<Void> response = (ex.getData() != null)
+                ? ApiResponse.error(errorCode.getCode(), ex.getMessage(), ex.getData())
+                : ApiResponse.error(errorCode.getCode(), ex.getMessage());
         return ResponseEntity.status(errorCode.getHttpStatus()).body(response);
     }
 

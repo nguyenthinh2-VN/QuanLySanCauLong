@@ -1,130 +1,133 @@
-# Implementation Plan: Module 4 - Bookings & Concurrency Control
+# Specification & Implementation Plan: Module 5 - Court Operations (POS, Check-in & Recurring)
 
-## 1. Overview
-Module 4 xây dựng luồng nghiệp vụ cốt lõi của hệ thống **QuanLySanCauLong**: **Đặt sân online dành cho khách hàng** kết hợp **Kiểm soát tương đồng / Chống đặt trùng slot (Concurrency & Double-Booking Control)**.
-Phạm vi Module 4 tập trung vào 5 REST API endpoints phục vụ khách hàng tra cứu slot trống theo thời gian thực, đặt sân trực tuyến, xem lịch sử đặt chỗ cá nhân, đổi lịch và hủy đặt sân trước giờ chơi.
+## 1. Specification (Phase 1: Specify)
 
-Module 5 tiếp theo sẽ phụ trách các nghiệp vụ vận hành ngoại tuyến: Đặt sân tại quầy (POS), Check-in khách vào sân và Đặt lịch cố định hàng tuần.
+### 1.1. Objective
+Module 5 mở rộng hệ sinh thái quản lý đặt sân của hệ thống **QuanLySanCauLong** sang các nghiệp vụ vận hành thực tế tại quầy (Operations & Offline) và đặt lịch định kỳ:
+1. **POS (Point-of-Sale):** Cho phép nhân viên (`STAFF`/`ADMIN`) tạo đơn đặt sân trực tiếp tại quầy cho khách lẻ/khách vãng lai mà không bắt buộc tạo tài khoản User (tránh rác dữ liệu). Trạng thái đơn được chuyển thẳng thành **`CONFIRMED`**.
+2. **Check-in:** Cho phép nhân viên (`STAFF`/`ADMIN`) xác nhận khách đến sân trong ngày thi đấu, chuyển trạng thái đơn từ `PENDING`/`CONFIRMED` $\rightarrow$ **`CHECKED_IN`**.
+3. **Recurring Bookings:** Cho phép khách hàng hoặc nhân viên đặt lịch cố định hàng tuần (lặp từ 1 đến 12 tuần) với cơ chế giao dịch **All-or-Nothing** (chỉ cần 1 ngày bị trùng $\rightarrow$ rollback 100% và báo danh sách ngày xung đột).
+
+### 1.2. Tech Stack & Existing Foundations
+- Java 23, Spring Boot 3.3.5, Spring Data JPA, Spring Security (Method Security with SpEL).
+- MapStruct 1.5.5.Final (`builder = @Builder(disableBuilder = true)`).
+- MySQL 8.x (Production) & In-memory H2 (Test).
+- Tái sử dụng: `CourtRepository.findByIdForUpdate`, `BookingRepository.existsActiveBooking`, `SecurityUtils.getCurrentUserId()`, `ApiResponse<T>`, `ErrorCode`, `SortUtils`.
+
+### 1.3. Commands
+- Build/Compile: `.\mvnw.cmd clean compile`
+- Run all tests: `.\mvnw.cmd test`
+- Focused test: `.\mvnw.cmd test -Dtest=BookingOperationServiceTest`
+
+### 1.4. Boundaries
+- **Always do:**
+  - 100% constructor injection (`@RequiredArgsConstructor`).
+  - Kiểm tra Pessimistic Lock trên row `Court` trước khi kiểm tra trùng slot.
+  - Snapshot `totalAmount` server-side cho tất cả các booking con.
+  - Phân quyền method-level bằng `RoleConstants` qua SpEL.
+  - Kiểm thử `@DataJpaTest` trên H2 thật cho bất kỳ query JPQL mới nào.
+- **Ask first:**
+  - Thay đổi cấu trúc bảng hoặc DTO của Module 1, 2, 3.
+  - Thêm endpoint ngoài 3 endpoint đã chốt.
+- **Never do:**
+  - Hard-code chuỗi role (như `"ADMIN"` hoặc `"STAFF"`).
+  - Trả Entity trực tiếp ra ngoài Controller.
+  - Bắt khách vãng lai phải tạo tài khoản giả ở bảng `users`.
+  - Tạo booking nửa vời khi đặt lịch cố định hàng tuần gặp xung đột.
 
 ---
 
 ## 2. Architecture & Design Decisions
 
-### 2.1. Đơn vị đặt sân = 1 Khung giờ chuẩn (TimeSlot)
-- Khách đặt sân theo từng khung giờ cố định (`courtId`, `bookingDate`, `timeSlotId`). Không chia nhỏ giờ lẻ trong một khung giờ.
-- **Lý do thiết kế:** Đơn giá thuê sân đã được cấu hình theo từng khung giờ tại Module 3. Đặt theo khung giờ chuẩn giúp đồng nhất bảng giá, thuận tiện hiển thị trên giao diện người dùng (Matrix Lịch trống) và tránh tạo ra các khoảng thời gian trống vụn vặt (30 phút, 15 phút) không thể cho thuê. Nghiệp vụ thuê giờ lẻ linh hoạt được dành riêng làm phần mở rộng trong tương lai.
+### 2.1. Nới lỏng quan hệ User trong Booking (Khách vãng lai không cần tài khoản)
+- **Vấn đề:** Khách chơi vãng lai đến quầy đặt sân trực tiếp thường không có tài khoản app/web. Bắt nhân viên tạo user giả (fake email/password) sẽ làm ô nhiễm bảng `users`, vi phạm bảo mật và khó giải trình trong kiểm toán.
+- **Quyết định thiết kế:**
+  - Trong entity `Booking`: chuyển `user` thành nullable (`@JoinColumn(name = "user_id", nullable = true)`).
+  - Bổ sung 2 trường snapshot: `guestName` (varchar 100, nullable), `guestPhone` (varchar 20, nullable).
+  - Tại API `POST /api/v1/bookings/pos`: Áp dụng quy tắc kiểm tra **XOR Logic** (đúng 1 trong 2 phương thức):
+    - Đặt cho tài khoản thành viên: Có `userId`, không có `guestName`/`guestPhone`.
+    - Đặt cho khách vãng lai: Không có `userId`, có đầy đủ `guestName` và `guestPhone`.
+    - Gửi cả hai hoặc thiếu cả hai $\rightarrow$ HTTP 400 (`INVALID_POS_REQUEST`).
 
-### 2.2. Kiểm soát xung đột đặt chỗ bằng Pessimistic Write Lock thay vì Unique Constraint
-- **Vấn đề:** Khi khách hủy đặt sân (`DELETE /api/v1/bookings/{id}`), hệ thống thực hiện Soft-Cancel (chuyển trạng thái sang `CANCELLED`) để bảo lưu lịch sử đơn hàng phục vụ kế toán, giải trình và audit. Do đó, trong bảng `bookings` có thể tồn tại nhiều bản ghi có cùng `(court_id, booking_date, time_slot_id)` nếu các đơn trước đã bị hủy.
-- **Hạn chế của Unique Constraint:** Ràng buộc `UNIQUE(court_id, booking_date, time_slot_id)` ở tầng Database sẽ ngăn cản việc khách khác đặt lại vào slot vừa được hủy, hoặc buộc phải xóa cứng (Hard Delete) bản ghi làm mất dấu vết kiểm toán.
-- **Giải pháp:** Sử dụng **Pessimistic Write Lock (`LockModeType.PESSIMISTIC_WRITE`)** trên bản ghi `Court` mục tiêu trong cùng một `@Transactional`:
-  ```java
-  // Bước 1: Khóa dòng Sân để tuần tự hóa các yêu cầu đồng thời
-  Court court = courtRepository.findByIdForUpdate(courtId)
-          .orElseThrow(() -> new AppException(ErrorCode.COURT_NOT_FOUND));
+### 2.2. Trạng thái khởi tạo POS là `CONFIRMED` thay vì `PENDING`
+- Khác với đặt online (khách tự đặt trên web mang trạng thái `PENDING` để chờ tích hợp cổng thanh toán trực tuyến ở Module 6), khách đặt tại quầy POS đang đứng trực tiếp trước nhân viên thu ngân và đã thanh toán tiền mặt/chuyển khoản tại chỗ. Do đó, đơn được xác nhận trực tiếp với trạng thái **`CONFIRMED`**.
 
-  // Bước 2: Kiểm tra xem slot đã có booking nào ở trạng thái PENDING, CONFIRMED, CHECKED_IN chưa
-  if (bookingRepository.existsActiveBooking(courtId, bookingDate, timeSlotId)) {
-      throw new AppException(ErrorCode.SLOT_ALREADY_BOOKED);
-  }
-  ```
-  Khi 2 khách hàng gửi request đặt cùng 1 slot tại cùng 1 tích tắc, transaction thứ 2 sẽ phải chờ lock. Sau khi transaction thứ nhất commit giữ chỗ thành công, transaction thứ hai đọc lại dữ liệu và lập tức nhận phản hồi **HTTP 409 Conflict (`SLOT_ALREADY_BOOKED`)**.
+### 2.3. Quy tắc State Machine & Cửa sổ thời gian Check-in
+- **Chỉ cho phép check-in** khi đơn ở trạng thái `PENDING` hoặc `CONFIRMED`. Nếu đơn đã `CHECKED_IN`, `CANCELLED` hoặc `COMPLETED` $\rightarrow$ ném HTTP 409 (`CHECK_IN_NOT_ALLOWED`).
+- **Ràng buộc ngày chơi:** `bookingDate` bắt buộc phải là ngày hôm nay (`booking.getBookingDate().isEqual(LocalDate.now())`), không được check-in sớm cho ngày tương lai hay ngày hôm qua.
+- **Ràng buộc giờ kết thúc:** Thời điểm hiện tại chưa quá giờ kết thúc của khung giờ (`LocalTime.now().isBefore(slot.getEndTime())`). Nếu đã quá giờ kết thúc $\rightarrow$ ném HTTP 409 (`CHECK_IN_NOT_ALLOWED`).
+- Kết quả check-in thành công: Chuyển trạng thái sang **`CHECKED_IN`**.
 
-### 2.3. Snapshot giá tiền (`totalAmount`) tại thời điểm tạo đơn
-- Khi đơn đặt sân được tạo, hệ thống tự động tính toán:
-  $$\text{totalAmount} = \text{pricePerHour của TimeSlot} \times \text{thời lượng khung giờ (tính theo giờ)}$$
-  *(Ví dụ: Khung 16:00–21:00 có thời lượng 5 giờ, đơn giá 150.000 VNĐ/giờ $\rightarrow$ totalAmount = 750.000 VNĐ).*
-- Giá trị này được lưu cố định (snapshot) vào cột `total_amount` của bảng `bookings`. Sau này dù Quản trị viên có thay đổi bảng giá của khung giờ đó, giá trị các đơn đặt sân trong quá khứ vẫn được bảo toàn nguyên vẹn, đảm bảo tính chuẩn xác cho hóa đơn và báo cáo doanh thu (Module 6 & 8).
-
-### 2.4. Trạng thái Đặt sân & Quy trình Giữ chỗ (Booking Lifecycle)
-- Khi đặt sân online thành công (`POST /api/v1/bookings`), đơn hàng mang trạng thái mặc định: **`PENDING`** (Đang chờ thanh toán).
-- Slot ở trạng thái `PENDING` được tính là **đã bị chiếm chỗ** (được hiển thị `BOOKED` trên màn hình tra cứu), ngăn không cho khách khác đặt đè.
-- **Module 6 (Payments)** sẽ lắng nghe hoặc tích hợp để chuyển trạng thái sang `CONFIRMED` khi khách thanh toán thành công, hoặc giải phóng slot nếu quá hạn thanh toán.
-- Khách chỉ được phép đổi lịch (`PUT`) hoặc hủy lịch (`DELETE`) khi đơn ở trạng thái `PENDING` hoặc `CONFIRMED`, và **thời điểm hiện tại phải trước thời gian bắt đầu của khung giờ đã đặt**.
-
-### 2.5. Bảo mật Phân quyền Chủ sở hữu qua SpEL (`@bookingSecurity.isOwner(#id)`)
-- Đối với các thao tác nhạy cảm trên từng booking (`PUT`, `DELETE`):
-  `@PreAuthorize("hasRole(T(com.badminton.shared.constant.RoleConstants).ADMIN) or @bookingSecurity.isOwner(#id)")`
-- Component `BookingSecurity` đối chiếu ID người dùng hiện tại trong Security Context (`SecurityUtils.getCurrentUserId()`) với chủ sở hữu của booking. Nếu booking không tồn tại hoặc không thuộc quyền sở hữu của user, method trả về `false`, Spring Security sẽ chặn lại với **HTTP 403 Forbidden** trước khi logic service được thực thi, đảm bảo không làm lộ thông tin tồn tại của bản ghi.
+### 2.4. Thuật toán Đặt lịch cố định hàng tuần (Recurring Bookings) - All-or-Nothing
+- **Tham số đầu vào:** `{courtId, timeSlotId, dayOfWeek, startDate, weeks, note?}` với $1 \le weeks \le 12$.
+- **Xác định chuỗi ngày:**
+  - Ngày bắt đầu chuỗi $D_0$ là ngày đầu tiên $\ge startDate$ có thứ trong tuần trùng với `dayOfWeek`.
+  - Danh sách $N$ ngày: $D_i = D_0 + 7 \times i$ với $i \in [0, weeks - 1]$.
+  - Guard tầm nhìn tối đa: Ngày cuối cùng $D_{weeks-1}$ không được vượt quá `hôm nay + 90 ngày`. Nếu vượt $\rightarrow$ ném HTTP 400 (`RECURRING_HORIZON_EXCEEDED`).
+- **All-or-Nothing Concurrency:**
+  - Mở một `@Transactional` duy nhất.
+  - Khóa bi quan Sân con: `courtRepository.findByIdForUpdate(courtId)`.
+  - Lặp qua $N$ ngày và kiểm tra `bookingRepository.existsActiveBooking(courtId, date, timeSlotId)`.
+  - Nếu phát hiện **bất kỳ ngày nào** đã bị chiếm chỗ $\rightarrow$ thu thập toàn bộ vào `conflictedDates`, ném lỗi HTTP 409 (`RECURRING_SLOT_CONFLICT`) kèm danh sách ngày xung đột, kích hoạt rollback toàn bộ transaction.
+  - Nếu tất cả $N$ slot đều trống $\rightarrow$ lưu toàn bộ $N$ bản ghi booking với status `PENDING`, tính snapshot `totalAmount` cho từng booking, trả về danh sách kèm tổng số lượng tạo thành công.
 
 ---
 
-## 3. Danh Mục 5 REST API Endpoints
+## 3. Danh Mục 3 REST API Endpoints Module 5
 
-| # | HTTP Method | Endpoint URI | Quyền hạn | Mô tả |
+| # | HTTP Method | Endpoint URI | Quyền hạn (RBAC) | Mô tả |
 |---|---|---|---|---|
-| 1 | `GET` | `/api/v1/bookings/availability` | Public (permitAll) | Xem ma trận slot trống theo ngày (`date` bắt buộc, `courtId` / `complexId` tùy chọn). Trả về trạng thái từng slot: `FREE`, `BOOKED`, `PASSED`, `UNAVAILABLE`. |
-| 2 | `POST` | `/api/v1/bookings` | Authenticated | Đặt sân online cho chính mình. Body: `{courtId, bookingDate, timeSlotId, note?}`. Trả về 201 Created, status = `PENDING`. |
-| 3 | `GET` | `/api/v1/bookings/my` | Authenticated | Lịch sử đặt sân của user hiện tại (phân trang, sort whitelist: `bookingDate`, `createdAt`, `totalAmount`, lọc theo `status`, `fromDate`, `toDate`). |
-| 4 | `PUT` | `/api/v1/bookings/{id}` | Owner hoặc Admin | Đổi lịch đặt sân (court, date, timeSlot, note). Guards: status ∈ {PENDING, CONFIRMED}, trước giờ bắt đầu, slot mới phải trống, tính lại `totalAmount`. |
-| 5 | `DELETE` | `/api/v1/bookings/{id}` | Owner hoặc Admin | Hủy lịch đặt sân (Soft-Cancel: chuyển status sang `CANCELLED`). Guards: status ∈ {PENDING, CONFIRMED}, trước giờ bắt đầu. |
+| 1 | `POST` | `/api/v1/bookings/pos` | `STAFF`, `ADMIN` | Đặt sân tại quầy cho khách vãng lai hoặc đặt hộ thành viên. Trả về 201 Created, status = `CONFIRMED`. |
+| 2 | `POST` | `/api/v1/bookings/{id}/check-in` | `STAFF`, `ADMIN` | Check-in khách vào sân. Guards: status ∈ {PENDING, CONFIRMED}, date = hôm nay, now < slot endTime. Trả về 200 OK, status = `CHECKED_IN`. |
+| 3 | `POST` | `/api/v1/bookings/recurring` | `isAuthenticated()` | Đặt lịch cố định hàng tuần (1–12 tuần). Giao dịch All-or-Nothing. Trả về 201 Created kèm `{createdCount, bookings: [...]}`. |
 
 ---
 
-## 4. Cấu Trúc File & Package Tổ Chức
+## 4. Kế Hoạch Triển Khai Chi Tiết (Phases & Tasks)
 
-```
-src/main/java/com/badminton/modules/booking/
-├── BookingController.java                 # REST Controller chứa 5 endpoints
-├── entity/
-│   ├── Booking.java                       # Entity đơn đặt sân (table: bookings)
-│   ├── BookingStatus.java                 # Enum: PENDING, CONFIRMED, CHECKED_IN, COMPLETED, CANCELLED
-│   └── SlotStatus.java                    # Enum trạng thái hiển thị: FREE, BOOKED, PASSED, UNAVAILABLE
-├── repository/
-│   └── BookingRepository.java             # JPA Repository, truy vấn kiểm tra trùng slot & availability
-├── dto/
-│   ├── request/
-│   │   ├── CreateBookingRequest.java      # courtId, bookingDate, timeSlotId, note
-│   │   └── UpdateBookingRequest.java      # courtId?, bookingDate?, timeSlotId?, note?
-│   └── response/
-│       ├── BookingResponse.java           # DTO trả về chi tiết đơn đặt sân
-│       ├── CourtAvailabilityResponse.java # Danh sách slot theo từng sân
-│       └── SlotAvailabilityResponse.java  # Chi tiết trạng thái của 1 slot
-├── mapper/
-│   └── BookingMapper.java                 # MapStruct chuyển đổi Entity <-> DTO
-├── security/
-│   └── BookingSecurity.java               # Component kiểm tra quyền sở hữu đơn đặt sân
-└── service/
-    ├── BookingService.java                # Interface nghiệp vụ đặt sân
-    └── impl/
-        └── BookingServiceImpl.java        # Triển khai nghiệp vụ kèm Pessimistic Lock & Guards
-```
+### Phase 1: Mở rộng Entity, DTOs & Error Codes
+- **Task 1.1:** Cập nhật `ErrorCode.java`: Thêm 4 mã lỗi `INVALID_POS_REQUEST` (400), `CHECK_IN_NOT_ALLOWED` (409), `RECURRING_SLOT_CONFLICT` (409), `RECURRING_HORIZON_EXCEEDED` (400).
+- **Task 1.2:** Cập nhật `AppException.java` & `GlobalExceptionHandler.java`: Hỗ trợ truyền dữ liệu chi tiết (`data` / `conflictedDates`) trong phản hồi lỗi.
+- **Task 1.3:** Cập nhật Entity `Booking.java`: Nới lỏng `user` thành nullable, thêm 2 trường `guestName` (length 100), `guestPhone` (length 20).
+- **Task 1.4:** Cập nhật `BookingResponse.java` & `BookingMapper.java`: Ánh xạ `guestName`, `guestPhone`.
+- **Task 1.5:** Tạo DTOs mới:
+  - `CreatePosBookingRequest.java`
+  - `CreateRecurringBookingRequest.java`
+  - `RecurringBookingResponse.java`
+
+### Phase 2: Triển Khai Nghiệp Vụ Tại Quầy & Check-in (Service & Controller)
+- **Task 2.1:** Khai báo 3 phương thức mới trong `BookingService.java`:
+  - `BookingResponse createPosBooking(CreatePosBookingRequest request);`
+  - `BookingResponse checkInBooking(Long id);`
+  - `RecurringBookingResponse createRecurringBooking(CreateRecurringBookingRequest request);`
+- **Task 2.2:** Triển khai logic trong `BookingServiceImpl.java`:
+  - `createPosBooking`: Kiểm tra XOR `userId` vs `guestName` + `guestPhone`, khóa bi quan sân, kiểm tra slot trống, tính giá snapshot, gán status = `CONFIRMED`.
+  - `checkInBooking`: Kiểm tra status hợp lệ, kiểm tra ngày hôm nay, kiểm tra chưa quá endTime, gán status = `CHECKED_IN`.
+  - `createRecurringBooking`: Kiểm tra weeks [1, 12], sinh chuỗi $N$ ngày, kiểm tra horizon 90 ngày, khóa bi quan sân, batch check slot trống All-or-Nothing, lưu $N$ đơn status = `PENDING`.
+- **Task 2.3:** Bổ sung 3 endpoints vào `BookingController.java` với phân quyền SpEL và Swagger OpenAPI annotations đầy đủ.
+
+### Phase 3: Kiểm Thử Toàn Diện (Unit, DataJpa & Integration Tests)
+- **Task 3.1:** Viết `BookingServiceTest` bao phủ:
+  - POS: đặt thành công cho khách vãng lai (`guestName`/`guestPhone`), đặt thành công cho `userId`, ném `INVALID_POS_REQUEST` khi gửi cả hai hoặc thiếu cả hai.
+  - Check-in: check-in thành công cho đơn PENDING/CONFIRMED hôm nay; ném `CHECK_IN_NOT_ALLOWED` khi đơn hôm qua, đơn đã check-in, đơn quá endTime.
+  - Recurring: đặt thành công chuỗi tuần; ném `RECURRING_SLOT_CONFLICT` kèm ngày xung đột khi có 1 ngày bị chiếm và không có đơn nào được tạo; ném `RECURRING_HORIZON_EXCEEDED` khi vượt 90 ngày.
+- **Task 3.2:** Viết Test Concurrent POS vs Online Booking trên cùng 1 slot (đúng 1 bên thắng, bên còn lại nhận 409).
+- **Task 3.3:** Chạy `.\mvnw.cmd clean test` đảm bảo 100% test suites trong dự án pass.
+
+### Phase 4: Đồng Bộ Hệ Thống Tài Liệu
+- **Task 4.1:** Tạo `docs/api/module-5-bookings-pos.md` với request/response mẫu của cả 3 endpoints và các case lỗi.
+- **Task 4.2:** Tạo `docs/architecture/modules/module-5-bookings-pos.md` với bảng SOLID và 3 câu trả lời thiết kế chuyên sâu.
+- **Task 4.3:** Cập nhật `docs/architecture/README.md` (Module 5 Hoàn thành).
+- **Task 4.4:** Kiểm tra đối soát `docs/architecture/rbac-matrix.md` (dòng 19, 20, 22).
 
 ---
 
-## 5. Các Bước Triển Khai (Phases)
+## 5. Success Criteria & Verification Checklist
 
-- **Phase 1: Hạ tầng kiểm thử H2, Error Codes & SecurityConfig**
-  - Thêm dependency `com.h2database:h2` (scope test) vào `pom.xml`.
-  - Mở rộng `ErrorCode.java` với 6 mã lỗi mới: `BOOKING_NOT_FOUND`, `SLOT_ALREADY_BOOKED`, `COURT_NOT_AVAILABLE`, `INVALID_BOOKING_DATE`, `BOOKING_NOT_CANCELLABLE`, `BOOKING_NOT_RESCHEDULABLE`.
-  - Bổ sung cấu hình `permitAll` cho `GET /api/v1/bookings/availability` trong `SecurityConfig.java`.
-  - Bổ sung method `findByIdForUpdate(Long id)` với `@Lock(LockModeType.PESSIMISTIC_WRITE)` vào `CourtRepository`.
-
-- **Phase 2: Domain Entity, Repository, DTOs & Mappers**
-  - Tạo Entity `Booking`, Enums `BookingStatus`, `SlotStatus`.
-  - Tạo DTOs request/response có đầy đủ bean validation.
-  - Tạo MapStruct `BookingMapper` (tắt builder để tương thích `BaseEntity`).
-  - Tạo `BookingRepository` với các JPQL query tìm slot trùng và query lịch sử đặt sân.
-
-- **Phase 3: Security Component & Core Booking Service**
-  - Tạo `BookingSecurity` với method `isOwner(Long bookingId)`.
-  - Tạo `BookingService` và triển khai `BookingServiceImpl`:
-    - Đặt sân online với Pessimistic Lock và snapshot `totalAmount`.
-    - Lấy lịch sử đặt sân của user hiện tại với `SortUtils` whitelist validation.
-    - Đổi lịch (`PUT`) và Hủy lịch (`DELETE`) kèm các guards kiểm tra trạng thái và thời gian cutoff.
-
-- **Phase 4: Availability Service & REST Controller**
-  - Triển khai thuật toán tính toán trạng thái slot (`FREE`, `BOOKED`, `PASSED`, `UNAVAILABLE`) cho từng sân con theo ngày.
-  - Tạo `BookingController` với đầy đủ 5 endpoints và tài liệu Swagger OpenAPI `@Tag(name = "Bookings")`.
-
-- **Phase 5: Kiểm Thử Toàn Diện (Unit Test, DataJpaTest & Concurrency Test)**
-  - Viết `BookingRepositoryDataJpaTest` chạy trên H2 thật kiểm thử các câu query kiểm tra xung đột slot.
-  - Viết `BookingConcurrencyTest` mô phỏng 2 threads đồng thời đặt cùng 1 slot để kiểm chứng Pessimistic Lock (đúng 1 thread nhận 201, thread còn lại nhận 409).
-  - Viết `BookingServiceTest` bao quát toàn bộ các guards nghiệp vụ (ngày quá khứ, sân bảo trì, đổi lịch quá giờ bắt đầu, hủy lịch).
-  - Chạy `.\mvnw.cmd clean test` đảm bảo 100% tests pass.
-
-- **Phase 6: Đồng Bộ Hệ Thống Tài Liệu**
-  - Tạo `docs/api/module-4-bookings.md`: Đầy đủ request/response cho cả 5 endpoints và các mã lỗi (400, 401, 403, 404, 409).
-  - Tạo `docs/architecture/modules/module-4-bookings.md`: Phân tích bài toán, kiến trúc, áp dụng SOLID và giải thích các quyết định thiết kế.
-  - Cập nhật `docs/architecture/README.md`: Cập nhật trạng thái Module 2, 3, 4 và chuẩn hóa toàn bộ sơ đồ phân tầng sang package-by-feature.
-  - Cập nhật `docs/architecture/rbac-matrix.md`: Bổ sung dòng `GET /api/v1/bookings/my`.
+- [ ] `POST /api/v1/bookings/pos` với CUSTOMER $\rightarrow$ 403 Forbidden; với STAFF + khách lẻ (không `userId`) $\rightarrow$ 201 Created và status = `CONFIRMED`, `guestName`/`guestPhone` lưu đúng.
+- [ ] `POST /pos` thiếu cả `userId` lẫn `guestName` $\rightarrow$ 400; gửi cả hai $\rightarrow$ 400.
+- [ ] Đặt POS và đặt online concurrent cùng 1 slot $\rightarrow$ chỉ 1 bên 201, bên còn lại 409.
+- [ ] `POST /api/v1/bookings/{id}/check-in` với booking hôm qua $\rightarrow$ 409; booking đã `CHECKED_IN` check-in lại $\rightarrow$ 409; booking hôm nay `PENDING`/`CONFIRMED` $\rightarrow$ 200 OK và status = `CHECKED_IN`.
+- [ ] `POST /api/v1/bookings/recurring` với `weeks = 4` $\rightarrow$ 201 Created, đúng 4 booking `PENDING` cách nhau 7 ngày; có 1 slot trong chuỗi đã bị chiếm $\rightarrow$ 409 Conflict cả chuỗi, rollback 100%, phản hồi liệt kê danh sách ngày conflict.
+- [ ] `.\mvnw.cmd clean compile` pass, không cảnh báo MapStruct.
+- [ ] Toàn bộ test suites pass 100%.

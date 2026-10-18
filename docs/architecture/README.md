@@ -82,11 +82,13 @@ Mỗi module đều có một tài liệu phân tích riêng biệt (bài toán 
 - 📘 **Module 2 (User Management & Role Assignment):** [`docs/architecture/modules/module-2-user-management.md`](modules/module-2-user-management.md) *(Đã hoàn thành - Quản lý người dùng & 4 Guards bảo vệ Admin)*.
 - 📘 **Module 3 (Courts, TimeSlots & Pricing):** [`docs/architecture/modules/module-3-courts.md`](modules/module-3-courts.md) *(Đã hoàn thành - Cụm sân, Sân con, Khung giờ & Bảng giá chuẩn)*.
 - 📘 **Module 4 (Bookings & Concurrency Control):** [`docs/architecture/modules/module-4-bookings.md`](modules/module-4-bookings.md) *(Đã hoàn thành - Đặt sân online & Pessimistic Lock chống double-booking)*.
+- 📘 **Module 5 (Court Operations - POS, Check-in & Recurring):** [`docs/architecture/modules/module-5-bookings-pos.md`](modules/module-5-bookings-pos.md) *(Đã hoàn thành - Vận hành quầy POS, Check-in & Đặt cố định All-or-Nothing)*.
 
 ### 📌 4. Tài Liệu Tích Hợp API Cho Frontend
 - 👉 Module 1 (Auth): [`docs/api/module-1-auth-rbac.md`](../api/module-1-auth-rbac.md)
 - 👉 Module 3 (Courts & TimeSlots): [`docs/api/module-3-courts.md`](../api/module-3-courts.md)
-- 👉 Module 4 (Bookings): [`docs/api/module-4-bookings.md`](../api/module-4-bookings.md)
+- 👉 Module 4 (Bookings Online): [`docs/api/module-4-bookings.md`](../api/module-4-bookings.md)
+- 👉 Module 5 (Court Operations & POS): [`docs/api/module-5-bookings-pos.md`](../api/module-5-bookings-pos.md)
 
 ---
 
