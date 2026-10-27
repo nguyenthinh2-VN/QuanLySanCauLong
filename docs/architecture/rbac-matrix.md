@@ -51,13 +51,13 @@ Hệ thống sử dụng enum `RoleType` lưu trong bảng `roles`, quan hệ Ma
 | 21| Hủy / Đổi lịch của mình | `PUT, DELETE /api/v1/bookings/{id}` | ❌ | ✅ | ✅ | ✅ | `@PreAuthorize("hasRole('ADMIN') or @bookingSecurity.isOwner(#id)")` |
 | 22| Đặt lịch cố định hàng tuần | `POST /api/v1/bookings/recurring` | ❌ | ✅ | ✅ | ✅ | `@PreAuthorize("isAuthenticated()")` |
 | **V** | **Thanh toán & Khuyến mãi** | | | | | | *(Module 6 & 7)* |
-| 22| Thanh toán / Đặt cọc | `POST /api/v1/payments` | ❌ | ✅ | ✅ | ✅ | `@PreAuthorize("isAuthenticated()")` |
-| 23| Hoàn tiền hủy lịch | `POST /api/v1/payments/{id}/refund` | ❌ | ❌ | ✅ | ✅ | `@PreAuthorize("hasAnyRole('STAFF', 'ADMIN')")` |
-| 24| Quản lý Voucher khuyến mãi | `POST, PUT, DELETE /api/v1/vouchers` | ❌ | ❌ | ❌ | ✅ | `@PreAuthorize("hasRole('ADMIN')")` |
-| 25| Áp dụng Voucher vào đơn | `POST /api/v1/vouchers/apply` | ❌ | ✅ | ✅ | ✅ | Khách hàng áp mã khi thanh toán |
+| 23| Thanh toán / Đặt cọc | `POST /api/v1/payments` | ❌ | ✅ | ✅ | ✅ | `@PreAuthorize("isAuthenticated()")` |
+| 24| Hoàn tiền hủy lịch | `POST /api/v1/payments/{id}/refund` | ❌ | ❌ | ✅ | ✅ | `@PreAuthorize("hasAnyRole('STAFF', 'ADMIN')")` |
+| 25| Quản lý Voucher khuyến mãi | `POST, PUT, DELETE /api/v1/vouchers` | ❌ | ❌ | ❌ | ✅ | `@PreAuthorize("hasRole('ADMIN')")` |
+| 26| Áp dụng Voucher vào đơn | `POST /api/v1/vouchers/apply` | ❌ | ✅ | ✅ | ✅ | Khách hàng áp mã khi thanh toán |
 | **VI** | **Báo cáo (Dashboard)** | | | | | | *(Module 8)* |
-| 26| Doanh thu ngày/tuần/tháng | `GET /api/v1/reports/revenue` | ❌ | ❌ | ❌ | ✅ | `@PreAuthorize("hasRole('ADMIN')")` |
-| 27| Tỉ lệ lấp đầy sân (Occupancy) | `GET /api/v1/reports/occupancy` | ❌ | ❌ | ❌ | ✅ | `@PreAuthorize("hasRole('ADMIN')")` |
+| 27| Doanh thu ngày/tuần/tháng | `GET /api/v1/reports/revenue` | ❌ | ❌ | ❌ | ✅ | `@PreAuthorize("hasRole('ADMIN')")` |
+| 28| Tỉ lệ lấp đầy sân (Occupancy) | `GET /api/v1/reports/occupancy` | ❌ | ❌ | ❌ | ✅ | `@PreAuthorize("hasRole('ADMIN')")` |
 
 ---
 

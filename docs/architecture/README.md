@@ -29,16 +29,24 @@ src/main/java/com/badminton/
 │   │   ├── service/ (CourtComplexService, CourtService, TimeSlotService)
 │   │   ├── dto/ (request/, response/)
 │   │   └── mapper/ (CourtComplexMapper, CourtMapper, TimeSlotMapper)
-│   └── booking/                            # Module 4: Đặt sân online & Kiểm soát xung đột
-│       ├── BookingController.java
-│       ├── entity/ (Booking, BookingStatus, SlotStatus)
-│       ├── repository/ (BookingRepository)
-│       ├── service/ (BookingService, BookingServiceImpl)
-│       ├── security/ (BookingSecurity)
+│   ├── booking/                            # Module 4 & 5: Đặt sân online & Vận hành quầy POS
+│   │   ├── BookingController.java
+│   │   ├── entity/ (Booking, BookingStatus, SlotStatus)
+│   │   ├── repository/ (BookingRepository)
+│   │   ├── service/ (BookingService, BookingServiceImpl)
+│   │   ├── security/ (BookingSecurity)
+│   │   ├── dto/ (request/, response/)
+│   │   └── mapper/ (BookingMapper)
+│   └── payment/                            # Module 6: Thanh toán mô phỏng & Hoàn tiền
+│       ├── PaymentController.java
+│       ├── entity/ (Payment, PaymentType, PaymentMethod, PaymentStatus)
+│       ├── repository/ (PaymentRepository)
+│       ├── gateway/ (PaymentGateway, ChargeResult, MockPaymentGateway)
+│       ├── service/ (PaymentService, PaymentServiceImpl)
 │       ├── dto/ (request/, response/)
-│       └── mapper/ (BookingMapper)
+│       └── mapper/ (PaymentMapper)
 ├── security/                               # Cấu hình bảo mật, Bộ lọc JWT & Context Provider
-│   ├── SecurityConfig.java
+├── SecurityConfig.java
 │   ├── SecurityUtils.java
 │   ├── jwt/ (JwtTokenProvider, JwtAuthenticationFilter, ...)
 │   └── userdetails/ (CustomUserDetails, CustomUserDetailsService)
@@ -83,12 +91,14 @@ Mỗi module đều có một tài liệu phân tích riêng biệt (bài toán 
 - 📘 **Module 3 (Courts, TimeSlots & Pricing):** [`docs/architecture/modules/module-3-courts.md`](modules/module-3-courts.md) *(Đã hoàn thành - Cụm sân, Sân con, Khung giờ & Bảng giá chuẩn)*.
 - 📘 **Module 4 (Bookings & Concurrency Control):** [`docs/architecture/modules/module-4-bookings.md`](modules/module-4-bookings.md) *(Đã hoàn thành - Đặt sân online & Pessimistic Lock chống double-booking)*.
 - 📘 **Module 5 (Court Operations - POS, Check-in & Recurring):** [`docs/architecture/modules/module-5-bookings-pos.md`](modules/module-5-bookings-pos.md) *(Đã hoàn thành - Vận hành quầy POS, Check-in & Đặt cố định All-or-Nothing)*.
+- 📘 **Module 6 (Payments & Refunds):** [`docs/architecture/modules/module-6-payments.md`](modules/module-6-payments.md) *(Đã hoàn thành - Mock Gateway, Thanh toán Server-side & Hoàn tiền tự động hủy lịch)*.
 
 ### 📌 4. Tài Liệu Tích Hợp API Cho Frontend
 - 👉 Module 1 (Auth): [`docs/api/module-1-auth-rbac.md`](../api/module-1-auth-rbac.md)
 - 👉 Module 3 (Courts & TimeSlots): [`docs/api/module-3-courts.md`](../api/module-3-courts.md)
 - 👉 Module 4 (Bookings Online): [`docs/api/module-4-bookings.md`](../api/module-4-bookings.md)
 - 👉 Module 5 (Court Operations & POS): [`docs/api/module-5-bookings-pos.md`](../api/module-5-bookings-pos.md)
+- 👉 Module 6 (Payments & Refunds): [`docs/api/module-6-payments.md`](../api/module-6-payments.md)
 
 ---
 

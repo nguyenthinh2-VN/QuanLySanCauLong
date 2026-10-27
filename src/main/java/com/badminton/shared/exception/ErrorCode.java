@@ -65,7 +65,13 @@ public enum ErrorCode {
     INVALID_POS_REQUEST("INVALID_POS_REQUEST", "Yêu cầu đặt sân tại quầy không hợp lệ (chỉ chọn một trong hai: có tài khoản hoặc khách lẻ)", HttpStatus.BAD_REQUEST),
     CHECK_IN_NOT_ALLOWED("CHECK_IN_NOT_ALLOWED", "Không thể check-in đơn đặt sân ở trạng thái hiện tại hoặc không đúng ngày/giờ", HttpStatus.CONFLICT),
     RECURRING_SLOT_CONFLICT("RECURRING_SLOT_CONFLICT", "Một số ngày trong chuỗi đặt lặp đã bị trùng hoặc đã có người đặt", HttpStatus.CONFLICT),
-    RECURRING_HORIZON_EXCEEDED("RECURRING_HORIZON_EXCEEDED", "Chuỗi ngày đặt lặp vượt quá giới hạn tối đa 90 ngày kể từ hôm nay", HttpStatus.BAD_REQUEST);
+    RECURRING_HORIZON_EXCEEDED("RECURRING_HORIZON_EXCEEDED", "Chuỗi ngày đặt lặp vượt quá giới hạn tối đa 90 ngày kể từ hôm nay", HttpStatus.BAD_REQUEST),
+
+    // Module 6 - Payments & Refunds
+    PAYMENT_NOT_FOUND("PAYMENT_NOT_FOUND", "Không tìm thấy thông tin giao dịch thanh toán", HttpStatus.NOT_FOUND),
+    BOOKING_NOT_PAYABLE("BOOKING_NOT_PAYABLE", "Đơn đặt sân không ở trạng thái chờ thanh toán", HttpStatus.CONFLICT),
+    BOOKING_ALREADY_PAID("BOOKING_ALREADY_PAID", "Đơn đặt sân này đã được thanh toán thành công trước đó", HttpStatus.CONFLICT),
+    REFUND_NOT_ALLOWED("REFUND_NOT_ALLOWED", "Giao dịch không đủ điều kiện hoàn tiền", HttpStatus.CONFLICT);
 
     private final String code;
     private final String message;

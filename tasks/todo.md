@@ -1,14 +1,21 @@
-# Tasks Checklist: Module 5 - Court Operations (POS, Check-in & Recurring Bookings)
+# Tasks Checklist: Module 6 - Payments & Refunds
 
-## Task 1: Domain Model Evolution, Error Codes & DTOs
-**Description:** Mở rộng entity `Booking` để hỗ trợ khách vãng lai (nới lỏng `user` thành nullable, bổ sung `guestName` và `guestPhone`), bổ sung 4 mã lỗi mới vào `ErrorCode.java`, nâng cấp `AppException` và `GlobalExceptionHandler` hỗ trợ trả về dữ liệu lỗi chi tiết (`conflictedDates`), cập nhật `BookingResponse`, `BookingMapper`, và tạo mới các DTO request/response phục vụ 3 API mới.
+## Task 1: Error Codes, Domain Entities, Enums & Mock Payment Gateway
+**Description:** Bổ sung 4 mã lỗi thanh toán vào `ErrorCode.java`, xây dựng các enum nghiệp vụ thanh toán (`PaymentType`, `PaymentMethod`, `PaymentStatus`), tạo entity `Payment` kế thừa `BaseEntity` và liên kết với `Booking`, tạo interface `PaymentGateway`, record `ChargeResult` và implementation `MockPaymentGateway`.
 
 **Acceptance criteria:**
-- [x] `ErrorCode.java` bổ sung: `INVALID_POS_REQUEST` (400), `CHECK_IN_NOT_ALLOWED` (409), `RECURRING_SLOT_CONFLICT` (409), `RECURRING_HORIZON_EXCEEDED` (400).
-- [x] `AppException.java` và `GlobalExceptionHandler.java` hỗ trợ truyền kèm payload lỗi `data` (ví dụ danh sách `conflictedDates`).
-- [x] `Booking.java`: `@ManyToOne @JoinColumn(name = "user_id", nullable = true)` và thêm 2 trường `@Column(name = "guest_name", length = 100) String guestName;` và `@Column(name = "guest_phone", length = 20) String guestPhone;`.
-- [x] `BookingResponse.java` & `BookingMapper.java` ánh xạ thêm `guestName`, `guestPhone`.
-- [x] Tạo các DTOs: `CreatePosBookingRequest`, `CreateRecurringBookingRequest`, `RecurringBookingResponse`.
+- [x] `ErrorCode.java` bổ sung: `PAYMENT_NOT_FOUND` (404), `BOOKING_NOT_PAYABLE` (409), `BOOKING_ALREADY_PAID` (409), `REFUND_NOT_ALLOWED` (409).
+- [x] Tạo enums trong package `com.badminton.modules.payment.entity`:
+  - `PaymentType`: `FULL`, `DEPOSIT`.
+  - `PaymentMethod`: `CASH`, `BANK_TRANSFER`, `E_WALLET`.
+  - `PaymentStatus`: `PENDING`, `SUCCESS`, `FAILED`, `REFUNDED`.
+- [x] Tạo entity `Payment` trong `com.badminton.modules.payment.entity`:
+  - Table name `payments`, extends `BaseEntity`.
+  - Các trường: `booking` (@ManyToOne @JoinColumn nullable=false), `amount` (BigDecimal nullable=false precision=12 scale=2), `paymentType` (@Enumerated STRING), `paymentMethod` (@Enumerated STRING), `status` (@Enumerated STRING default PENDING), `transactionRef` (String unique nullable), `paidAt` (LocalDateTime nullable), `note` (String length 500).
+- [x] Tạo package `com.badminton.modules.payment.gateway`:
+  - Interface `PaymentGateway`: phương thức `ChargeResult charge(BigDecimal amount, String bookingRef)`.
+  - Record `ChargeResult(boolean success, String transactionRef, String message)`.
+  - Class `MockPaymentGateway` (@Component) implements `PaymentGateway`: `success = amount != null && amount.compareTo(BigDecimal.ZERO) > 0`, `transactionRef = "MOCK-" + UUID.randomUUID()`.
 
 **Verification:**
 - [x] Build succeeds: `.\mvnw.cmd compile`
@@ -17,37 +24,51 @@
 
 **Files likely touched:**
 - `src/main/java/com/badminton/shared/exception/ErrorCode.java`
-- `src/main/java/com/badminton/shared/exception/AppException.java`
-- `src/main/java/com/badminton/shared/exception/GlobalExceptionHandler.java`
-- `src/main/java/com/badminton/modules/booking/entity/Booking.java`
-- `src/main/java/com/badminton/modules/booking/dto/response/BookingResponse.java`
-- `src/main/java/com/badminton/modules/booking/mapper/BookingMapper.java`
-- `src/main/java/com/badminton/modules/booking/dto/request/CreatePosBookingRequest.java`
-- `src/main/java/com/badminton/modules/booking/dto/request/CreateRecurringBookingRequest.java`
-- `src/main/java/com/badminton/modules/booking/dto/response/RecurringBookingResponse.java`
+- `src/main/java/com/badminton/modules/payment/entity/PaymentType.java`
+- `src/main/java/com/badminton/modules/payment/entity/PaymentMethod.java`
+- `src/main/java/com/badminton/modules/payment/entity/PaymentStatus.java`
+- `src/main/java/com/badminton/modules/payment/entity/Payment.java`
+- `src/main/java/com/badminton/modules/payment/gateway/ChargeResult.java`
+- `src/main/java/com/badminton/modules/payment/gateway/PaymentGateway.java`
+- `src/main/java/com/badminton/modules/payment/gateway/MockPaymentGateway.java`
 
-**Estimated scope:** Medium: 9 files
+**Estimated scope:** Medium: 8 files
 
 ---
 
-## Checkpoint 1: Domain Models & DTOs Ready
+## Checkpoint 1: Domain, Enums & Gateway Ready
 - [x] Build succeeds: `.\mvnw.cmd compile`
-- [x] MapStruct và Entity biên dịch sạch sẽ, không có lỗi ánh xạ.
+- [x] Các entity và gateway biên dịch thành công, không có lỗi cú pháp.
 
 ---
 
-## Task 2: Service Operations & REST Controller Endpoints
-**Description:** Triển khai 3 phương thức nghiệp vụ mới trong `BookingService`/`BookingServiceImpl` (`createPosBooking`, `checkInBooking`, `createRecurringBooking`) kèm đầy đủ guards, khóa bi quan chống double-booking, tính toán snapshot giá, và cung cấp 3 REST API endpoints tương ứng trong `BookingController`.
+## Task 2: Repository, DTOs, Mapper, Service Layer & REST Controller
+**Description:** Tạo `PaymentRepository` với query kiểm tra thanh toán thành công, tạo các DTOs và MapStruct mapper, hiện thực hóa nghiệp vụ thanh toán (tính amount server-side, gọi mock gateway, cập nhật booking sang CONFIRMED) và hoàn tiền (cập nhật payment REFUNDED, hủy booking CANCELLED), cung cấp 2 REST API endpoints tương ứng tại `PaymentController`.
 
 **Acceptance criteria:**
-- [x] `createPosBooking`: Kiểm tra XOR `userId` vs (`guestName` + `guestPhone`). Khóa hàng sân bằng `findByIdForUpdate`. Slot trống $\rightarrow$ tạo booking trạng thái `CONFIRMED`.
-- [x] `checkInBooking`: Kiểm tra status ∈ {PENDING, CONFIRMED}, `bookingDate == hôm nay`, `now < slot.endTime`. Thành công $\rightarrow$ chuyển trạng thái sang `CHECKED_IN`.
-- [x] `createRecurringBooking`: Xác thực `weeks ∈ [1, 12]`, sinh chuỗi $N$ ngày theo `dayOfWeek`, kiểm tra ngày cuối $\le$ hôm nay + 90 ngày. Khóa bi quan sân con 1 lần. Kiểm tra toàn bộ $N$ slot; nếu có bất kỳ ngày nào trùng $\rightarrow$ rollback và ném 409 `RECURRING_SLOT_CONFLICT` kèm `conflictedDates`. Nếu thành công $\rightarrow$ tạo $N$ đơn `PENDING` và trả về `RecurringBookingResponse`.
-- [x] `BookingController` bổ sung 3 endpoints:
-  - `POST /api/v1/bookings/pos`: `@PreAuthorize("hasAnyRole(T(com.badminton.shared.constant.RoleConstants).STAFF, T(com.badminton.shared.constant.RoleConstants).ADMIN)")` (201 Created).
-  - `POST /api/v1/bookings/{id}/check-in`: `@PreAuthorize("hasAnyRole(T(com.badminton.shared.constant.RoleConstants).STAFF, T(com.badminton.shared.constant.RoleConstants).ADMIN)")` (200 OK).
-  - `POST /api/v1/bookings/recurring`: `@PreAuthorize("isAuthenticated()")` (201 Created).
-- [x] Swagger OpenAPI `@Operation` và `@SecurityRequirement(name = "BearerAuth")` đầy đủ.
+- [x] `PaymentRepository` khai báo query `boolean existsByBookingIdAndStatus(Long bookingId, PaymentStatus status)`.
+- [x] Tạo các DTOs:
+  - `CreatePaymentRequest`: `bookingId` (@NotNull), `paymentType` (@NotNull), `paymentMethod` (@NotNull), `note` (@Size max 500). Không có field `amount`!
+  - `RefundPaymentRequest`: `reason` (@Size max 500).
+  - `PaymentResponse`: Chứa đầy đủ thông tin giao dịch trả về (`id`, `bookingId`, `amount`, `paymentType`, `paymentMethod`, `status`, `transactionRef`, `paidAt`, `note`, `createdAt`, `updatedAt`).
+- [x] Tạo `PaymentMapper` (MapStruct) ánh xạ `Payment` $\rightarrow$ `PaymentResponse` với `bookingId` từ `booking.id`.
+- [x] Tạo `PaymentService` và `PaymentServiceImpl` (@Transactional):
+  - `createPayment`:
+    - Guards: booking tồn tại (404), quyền gọi (chủ booking hoặc STAFF/ADMIN $\rightarrow$ 403 nếu không thỏa), `booking.status == PENDING` (409 `BOOKING_NOT_PAYABLE`), chưa có payment SUCCESS cho booking (409 `BOOKING_ALREADY_PAID`).
+    - Tính `amount` server-side: `FULL` = `booking.totalAmount`, `DEPOSIT` = `booking.totalAmount` / 2 (làm tròn 2 chữ số, `HALF_UP`).
+    - Gọi `paymentGateway.charge(amount, ...)`.
+    - Cập nhật `payment.status = SUCCESS`, `payment.paidAt = now`, `payment.transactionRef = result.transactionRef()`.
+    - Đồng thời chuyển `booking.status = CONFIRMED`.
+    - Lưu cả `payment` và `booking`.
+  - `refundPayment`:
+    - Guards: payment tồn tại (404), `payment.status == SUCCESS` (409 `REFUND_NOT_ALLOWED`), `booking.status ∉ {CHECKED_IN, COMPLETED}` (409 `REFUND_NOT_ALLOWED`).
+    - Cập nhật `payment.status = REFUNDED`.
+    - Chuyển `booking.status = CANCELLED`.
+    - Lưu cả `payment` và `booking`.
+- [x] Tạo `PaymentController`:
+  - `POST /api/v1/payments`: `@PreAuthorize("isAuthenticated()")` $\rightarrow$ trả về 201 Created.
+  - `POST /api/v1/payments/{id}/refund`: `@PreAuthorize("hasAnyRole(T(com.badminton.shared.constant.RoleConstants).STAFF, T(com.badminton.shared.constant.RoleConstants).ADMIN)")` $\rightarrow$ trả về 200 OK.
+  - Swagger annotations: `@Tag(name = "Payments")`, `@Operation`, `@SecurityRequirement(name = "BearerAuth")` đầy đủ.
 
 **Verification:**
 - [x] Build succeeds: `.\mvnw.cmd compile`
@@ -55,38 +76,42 @@
 **Dependencies:** Task 1
 
 **Files likely touched:**
-- `src/main/java/com/badminton/modules/booking/service/BookingService.java`
-- `src/main/java/com/badminton/modules/booking/service/impl/BookingServiceImpl.java`
-- `src/main/java/com/badminton/modules/booking/BookingController.java`
+- `src/main/java/com/badminton/modules/payment/repository/PaymentRepository.java`
+- `src/main/java/com/badminton/modules/payment/dto/request/CreatePaymentRequest.java`
+- `src/main/java/com/badminton/modules/payment/dto/request/RefundPaymentRequest.java`
+- `src/main/java/com/badminton/modules/payment/dto/response/PaymentResponse.java`
+- `src/main/java/com/badminton/modules/payment/mapper/PaymentMapper.java`
+- `src/main/java/com/badminton/modules/payment/service/PaymentService.java`
+- `src/main/java/com/badminton/modules/payment/service/impl/PaymentServiceImpl.java`
+- `src/main/java/com/badminton/modules/payment/PaymentController.java`
 
-**Estimated scope:** Small: 3 files
+**Estimated scope:** Medium: 8 files
 
 ---
 
-## Checkpoint 2: All 3 Module 5 Endpoints Implemented
+## Checkpoint 2: All Module 6 Endpoints Implemented
 - [x] Build succeeds: `.\mvnw.cmd compile`
-- [x] Tất cả 3 endpoints biên dịch trơn tru, logic guards và phân quyền SpEL sẵn sàng.
+- [x] Cả 2 endpoints biên dịch trơn tru, logic guards và phân quyền SpEL sẵn sàng.
 
 ---
 
-## Task 3: Comprehensive Testing (Unit Mockito & Concurrency Tests)
-**Description:** Xây dựng bộ test toàn diện cho Module 5 bao phủ toàn bộ các guards của POS, Check-in và Recurring, đồng thời viết integration test kiểm chứng concurrency giữa đặt tại quầy (POS) và đặt online trên cùng 1 slot.
+## Task 3: Comprehensive Testing (Unit Mockito & DataJpaTest)
+**Description:** Xây dựng bộ test toàn diện cho Module 6 gồm unit tests cho toàn bộ các kịch bản và guards của `PaymentService`, cùng integration test `@DataJpaTest` trên H2 database thật để xác thực query kiểm tra payment SUCCESS của booking.
 
 **Acceptance criteria:**
-- [x] Test Mockito cho `createPosBooking`:
-  - Khách vãng lai (`guestName`/`guestPhone`) $\rightarrow$ tạo thành công, status `CONFIRMED`.
-  - Thành viên (`userId`) $\rightarrow$ tạo thành công, link đúng user.
-  - Thiếu cả hai hoặc gửi cả hai $\rightarrow$ ném `INVALID_POS_REQUEST` (400).
-- [x] Test Mockito cho `checkInBooking`:
-  - Đơn PENDING hoặc CONFIRMED hôm nay $\rightarrow$ thành công, status `CHECKED_IN`.
-  - Đơn hôm qua $\rightarrow$ ném `CHECK_IN_NOT_ALLOWED` (409).
-  - Đơn đã `CHECKED_IN` rồi check-in lại $\rightarrow$ ném `CHECK_IN_NOT_ALLOWED` (409).
-  - Đơn đã quá giờ `endTime` $\rightarrow$ ném `CHECK_IN_NOT_ALLOWED` (409).
-- [x] Test Mockito cho `createRecurringBooking`:
-  - Đặt thành công 4 tuần $\rightarrow$ tạo đúng 4 booking PENDING cách nhau 7 ngày.
-  - 1 ngày trong chuỗi bị trùng slot $\rightarrow$ ném `RECURRING_SLOT_CONFLICT` (409), danh sách `conflictedDates` chứa đúng ngày bị trùng, không booking nào được lưu (All-or-Nothing).
-  - `weeks` ngoài [1, 12] hoặc vượt 90 ngày $\rightarrow$ ném lỗi 400.
-- [x] Test Concurrency: 2 threads (1 gọi POS, 1 gọi Online booking) cùng đặt 1 slot $\rightarrow$ đúng 1 bên thành công, bên còn lại nhận 409.
+- [x] Test Mockito trong `PaymentServiceTest`:
+  - Khách thanh toán FULL cho booking của mình $\rightarrow$ amount = 100%, status SUCCESS, booking CONFIRMED (201).
+  - Nhân viên quầy thanh toán DEPOSIT cho khách $\rightarrow$ amount = 50%, status SUCCESS, booking CONFIRMED (201).
+  - Khách cố tình thanh toán cho booking của người khác $\rightarrow$ 403 ACCESS_DENIED.
+  - Thanh toán booking không tồn tại $\rightarrow$ 404 BOOKING_NOT_FOUND.
+  - Thanh toán booking đã CANCELLED hoặc CONFIRMED $\rightarrow$ 409 BOOKING_NOT_PAYABLE.
+  - Thanh toán lần 2 cho booking đã có payment SUCCESS $\rightarrow$ 409 BOOKING_ALREADY_PAID.
+  - Staff hoàn tiền cho payment SUCCESS $\rightarrow$ payment REFUNDED, booking CANCELLED (200).
+  - Hoàn tiền payment không tồn tại $\rightarrow$ 404 PAYMENT_NOT_FOUND.
+  - Hoàn tiền payment chưa thành công hoặc đã REFUNDED $\rightarrow$ 409 REFUND_NOT_ALLOWED.
+  - Hoàn tiền khi khách đã CHECKED_IN hoặc COMPLETED $\rightarrow$ 409 REFUND_NOT_ALLOWED.
+- [x] Test JPA Data trong `PaymentRepositoryDataJpaTest` chạy trên H2:
+  - Khẳng định query `existsByBookingIdAndStatus` phát hiện chính xác khi đã có payment SUCCESS và trả về false khi chưa có hoặc ở status khác.
 - [x] Toàn bộ test suites trong toàn dự án pass 100%: `.\mvnw.cmd clean test`.
 
 **Verification:**
@@ -95,33 +120,40 @@
 **Dependencies:** Task 2
 
 **Files likely touched:**
-- `src/test/java/com/badminton/modules/booking/BookingServiceTest.java`
-- `src/test/java/com/badminton/modules/booking/BookingConcurrencyTest.java`
+- `src/test/java/com/badminton/modules/payment/PaymentServiceTest.java`
+- `src/test/java/com/badminton/modules/payment/PaymentRepositoryDataJpaTest.java`
 
-**Estimated scope:** Medium: 2 files
+**Estimated scope:** Small: 2 files
 
 ---
 
-## Task 4: Documentation Synchronization
-**Description:** Soạn thảo tài liệu API chi tiết cho Module 5, tài liệu phân tích kiến trúc Module 5, và cập nhật tài liệu tổng quan hệ thống theo quy ước của repository.
+## Checkpoint 3: Tests Pass 100%
+- [x] Tests pass: `.\mvnw.cmd clean test`
+- [x] Toàn bộ test suites của Module 1 đến Module 6 pass xanh, không có lỗi hồi quy.
+
+---
+
+## Task 4: Documentation Synchronization & Review
+**Description:** Soạn thảo tài liệu API chi tiết cho Module 6, tài liệu phân tích kiến trúc Module 6 (bảng SOLID, 3 quyết định thiết kế cốt lõi), cập nhật `docs/architecture/README.md`, rà soát `docs/architecture/rbac-matrix.md`, và thực hiện review qua `/open-code-review-delegate`.
 
 **Acceptance criteria:**
-- [x] Tạo `docs/api/module-5-bookings-pos.md`: Mẫu request/response đầy đủ cho cả 3 endpoints và các case lỗi (400, 401, 403, 404, 409).
-- [x] Tạo `docs/architecture/modules/module-5-bookings-pos.md`: Mô tả kiến trúc Module 5, bảng SOLID, giải thích chi tiết:
-  1. Vì sao `user` nullable + `guestName`/`guestPhone` cho khách vãng lai.
-  2. Vì sao POS $\rightarrow$ `CONFIRMED` còn Online $\rightarrow$ `PENDING`.
-  3. Vì sao Recurring áp dụng cơ chế All-or-Nothing.
-- [x] Cập nhật `docs/architecture/README.md`: Đánh dấu Module 5 hoàn thành và liên kết tới tài liệu kiến trúc tương ứng.
-- [x] Rà soát `docs/architecture/rbac-matrix.md` (mục IV: dòng 19, 20, 22).
+- [x] Tạo `docs/api/module-6-payments.md`: Chi tiết 2 endpoints thanh toán và hoàn tiền, mẫu request/response JSON và danh sách mã lỗi (400, 401, 403, 404, 409).
+- [x] Tạo `docs/architecture/modules/module-6-payments.md`: Mô tả kiến trúc Module 6, bảng SOLID, giải thích chi tiết:
+  1. Vì sao tách interface `PaymentGateway` (DIP — cắm cổng thật không sửa service).
+  2. Vì sao `amount` bắt buộc phải tính server-side (chống gian lận sửa giá từ client).
+  3. Vì sao refund đi kèm hủy lịch đặt sân `booking -> CANCELLED` (giải phóng slot ngay cho khách khác và bảo toàn lịch sử giao dịch).
+- [x] Cập nhật `docs/architecture/README.md`: Đánh dấu Module 6 hoàn thành và gắn link tới tài liệu tương ứng.
+- [x] Rà soát `docs/architecture/rbac-matrix.md` (mục V, dòng 22–23).
 
 **Verification:**
-- [x] Manual review: Kiểm tra toàn bộ markdown links hoạt động chính xác.
+- [x] Manual review: Toàn bộ markdown links hoạt động chính xác.
+- [x] Review bằng OCR: `ocr delegate rule` không có lỗi.
 
 **Dependencies:** Task 3
 
 **Files likely touched:**
-- `docs/api/module-5-bookings-pos.md`
-- `docs/architecture/modules/module-5-bookings-pos.md`
+- `docs/api/module-6-payments.md`
+- `docs/architecture/modules/module-6-payments.md`
 - `docs/architecture/README.md`
 - `docs/architecture/rbac-matrix.md`
 
@@ -129,8 +161,8 @@
 
 ---
 
-## Checkpoint 3: Module 5 Complete, Verified & Documented
-- [x] Cả 3 endpoints hoạt động đúng 100% đặc tả.
+## Checkpoint 4: Module 6 Complete, Verified & Documented
+- [x] Cả 2 endpoints hoạt động đúng 100% đặc tả.
 - [x] Tất cả các tiêu chí trong checklist tự kiểm tra đều pass.
 - [x] `.\mvnw.cmd clean compile` và `.\mvnw.cmd clean test` pass 100%.
 - [x] Hệ thống tài liệu API & Kiến trúc đồng bộ hoàn chỉnh.
