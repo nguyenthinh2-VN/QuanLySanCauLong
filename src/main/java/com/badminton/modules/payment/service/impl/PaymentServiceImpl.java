@@ -46,7 +46,9 @@ public class PaymentServiceImpl implements PaymentService {
         CustomUserDetails userDetails = SecurityUtils.getCurrentUserDetails()
                 .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
 
-        Booking booking = bookingRepository.findById(request.getBookingId())
+        // Khóa bi quan (PESSIMISTIC_WRITE) dòng booking để chống race condition
+        // double-charge
+        Booking booking = bookingRepository.findByIdForUpdate(request.getBookingId())
                 .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
 
         // Guard: Chỉ chủ booking hoặc STAFF/ADMIN mới được thanh toán
@@ -64,7 +66,8 @@ public class PaymentServiceImpl implements PaymentService {
             throw new AppException(ErrorCode.BOOKING_NOT_PAYABLE);
         }
 
-        // Guard: Chống thu tiền 2 lần - kiểm tra đã có payment SUCCESS nào cho booking này chưa
+        // Guard: Chống thu tiền 2 lần - kiểm tra đã có payment SUCCESS nào cho booking
+        // này chưa
         if (paymentRepository.existsByBookingIdAndStatus(booking.getId(), PaymentStatus.SUCCESS)) {
             throw new AppException(ErrorCode.BOOKING_ALREADY_PAID);
         }
@@ -116,12 +119,15 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     @Transactional
     public PaymentResponse refundPayment(Long paymentId, RefundPaymentRequest request) {
-        Payment payment = paymentRepository.findById(paymentId)
+        // Khóa bi quan (PESSIMISTIC_WRITE) dòng payment để chống race condition
+        // concurrent refund
+        Payment payment = paymentRepository.findByIdForUpdate(paymentId)
                 .orElseThrow(() -> new AppException(ErrorCode.PAYMENT_NOT_FOUND));
 
         // Guard: Payment phải ở trạng thái SUCCESS mới được refund
         if (payment.getStatus() != PaymentStatus.SUCCESS) {
-            throw new AppException(ErrorCode.REFUND_NOT_ALLOWED, "Chỉ có thể hoàn tiền các giao dịch đã thanh toán thành công");
+            throw new AppException(ErrorCode.REFUND_NOT_ALLOWED,
+                    "Chỉ có thể hoàn tiền các giao dịch đã thanh toán thành công");
         }
 
         // Guard: Booking chưa được CHECKED_IN hoặc COMPLETED

@@ -85,8 +85,8 @@ sequenceDiagram
     Client->>Ctrl: POST /api/v1/payments (bookingId, type, method)
     Ctrl->>Svc: createPayment(...)
     Note over Svc: Bắt đầu @Transactional
-    Svc->>BRepo: findById(bookingId)
-    BRepo-->>Svc: Booking (PENDING)
+    Svc->>BRepo: findByIdForUpdate(bookingId) [PESSIMISTIC_WRITE Lock]
+    BRepo-->>Svc: Booking (PENDING - Đã khóa row)
     Svc->>Svc: Kiểm tra quyền (Owner hoặc STAFF/ADMIN)
     Svc->>Repo: existsByBookingIdAndStatus(bookingId, SUCCESS)
     Repo-->>Svc: false
@@ -96,13 +96,18 @@ sequenceDiagram
     Svc->>Svc: booking.setStatus(CONFIRMED)
     Svc->>BRepo: save(booking)
     Svc->>Repo: save(payment)
-    Note over Svc: Commit @Transactional (Atomic)
+    Note over Svc: Commit @Transactional (Atomic + Release Lock)
     Svc-->>Ctrl: PaymentResponse (201 Created)
     Ctrl-->>Client: ApiResponse (Thanh toán thành công)
 ```
 
 - **Tính nguyên tử (Atomicity):** Cập nhật trạng thái `Payment` thành `SUCCESS` và `Booking` thành `CONFIRMED` diễn ra trong cùng một transaction `@Transactional`. Nếu có bất kỳ lỗi nào xảy ra trong quá trình lưu dữ liệu, toàn bộ thay đổi sẽ được rollback 100%, bảo đảm không có tình trạng "tiền đã trừ mà sân chưa xác nhận".
-- **Bảo vệ chống thanh toán lặp (Idempotency Guard):** Khóa trạng thái đơn đặt sân bằng cách chỉ chấp nhận `booking.status == PENDING` kết hợp query `existsByBookingIdAndStatus(bookingId, SUCCESS)`.
+- **Kiểm soát đồng thời chống Double-Charge (Pessimistic Lock):**
+  - Sử dụng `bookingRepository.findByIdForUpdate(request.getBookingId())` với `LockModeType.PESSIMISTIC_WRITE` ngay khi bắt đầu giao dịch thanh toán.
+  - Khi 2 luồng đồng thời thanh toán cùng một booking, luồng 2 sẽ bị chặn lại ở mức Database cho đến khi luồng 1 hoàn tất commit.
+  - Khi luồng 2 lấy được lock, trạng thái của booking đã chuyển sang `CONFIRMED`, guard `booking.getStatus() != BookingStatus.PENDING` lập tức chặn đứng và ném lỗi `409 BOOKING_NOT_PAYABLE` (hoặc `BOOKING_ALREADY_PAID`) **TRƯỚC KHI** gọi sang cổng thanh toán `PaymentGateway.charge(...)`.
+  - Khách hàng không bao giờ bị trừ tiền 2 lần trên tài khoản ngân hàng. Đã được chứng minh bằng kiểm thử tự động `PaymentConcurrencyTest` (100% pass).
+- **Chống hoàn tiền đồng thời (Concurrent Refund Protection):** Sử dụng `paymentRepository.findByIdForUpdate(paymentId)` để tuần tự hóa thao tác hoàn tiền, chặn đứng nguy cơ nhân viên click đúp hoặc 2 nhân viên cùng hoàn tiền 1 giao dịch.
 
 ---
 
