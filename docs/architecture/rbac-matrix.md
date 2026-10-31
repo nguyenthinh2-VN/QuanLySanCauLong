@@ -53,11 +53,12 @@ Hệ thống sử dụng enum `RoleType` lưu trong bảng `roles`, quan hệ Ma
 | **V** | **Thanh toán & Khuyến mãi** | | | | | | *(Module 6 & 7)* |
 | 23| Thanh toán / Đặt cọc | `POST /api/v1/payments` | ❌ | ✅ | ✅ | ✅ | `@PreAuthorize("isAuthenticated()")` |
 | 24| Hoàn tiền hủy lịch | `POST /api/v1/payments/{id}/refund` | ❌ | ❌ | ✅ | ✅ | `@PreAuthorize("hasAnyRole('STAFF', 'ADMIN')")` |
-| 25| Quản lý Voucher khuyến mãi | `POST, PUT, DELETE /api/v1/vouchers` | ❌ | ❌ | ❌ | ✅ | `@PreAuthorize("hasRole('ADMIN')")` |
-| 26| Áp dụng Voucher vào đơn | `POST /api/v1/vouchers/apply` | ❌ | ✅ | ✅ | ✅ | Khách hàng áp mã khi thanh toán |
+| 25| Quản lý Voucher khuyến mãi | `POST, PUT, DELETE, GET /api/v1/vouchers/**` | ❌ | ❌ | ❌ | ✅ | `@PreAuthorize("hasRole(T(com.badminton.shared.constant.RoleConstants).ADMIN)")` |
+| 26| Xem danh sách Voucher đang chạy | `GET /api/v1/vouchers/active` | ✅ | ✅ | ✅ | ✅ | `permitAll` (Công khai) |
+| 27| Áp dụng Voucher vào đơn | `POST /api/v1/vouchers/apply` | ❌ | ✅ | ✅ | ✅ | `@PreAuthorize("isAuthenticated()")` |
 | **VI** | **Báo cáo (Dashboard)** | | | | | | *(Module 8)* |
-| 27| Doanh thu ngày/tuần/tháng | `GET /api/v1/reports/revenue` | ❌ | ❌ | ❌ | ✅ | `@PreAuthorize("hasRole('ADMIN')")` |
-| 28| Tỉ lệ lấp đầy sân (Occupancy) | `GET /api/v1/reports/occupancy` | ❌ | ❌ | ❌ | ✅ | `@PreAuthorize("hasRole('ADMIN')")` |
+| 28| Doanh thu ngày/tuần/tháng | `GET /api/v1/reports/revenue` | ❌ | ❌ | ❌ | ✅ | `@PreAuthorize("hasRole('ADMIN')")` |
+| 29| Tỉ lệ lấp đầy sân (Occupancy) | `GET /api/v1/reports/occupancy` | ❌ | ❌ | ❌ | ✅ | `@PreAuthorize("hasRole('ADMIN')")` |
 
 ---
 

@@ -37,16 +37,25 @@ src/main/java/com/badminton/
 │   │   ├── security/ (BookingSecurity)
 │   │   ├── dto/ (request/, response/)
 │   │   └── mapper/ (BookingMapper)
-│   └── payment/                            # Module 6: Thanh toán mô phỏng & Hoàn tiền
-│       ├── PaymentController.java
-│       ├── entity/ (Payment, PaymentType, PaymentMethod, PaymentStatus)
-│       ├── repository/ (PaymentRepository)
-│       ├── gateway/ (PaymentGateway, ChargeResult, MockPaymentGateway)
-│       ├── service/ (PaymentService, PaymentServiceImpl)
+│   ├── payment/                            # Module 6: Thanh toán mô phỏng & Hoàn tiền
+│   │   ├── PaymentController.java
+│   │   ├── entity/ (Payment, PaymentType, PaymentMethod, PaymentStatus)
+│   │   ├── repository/ (PaymentRepository)
+│   │   ├── gateway/ (PaymentGateway, ChargeResult, MockPaymentGateway)
+│   │   ├── service/ (PaymentService, PaymentServiceImpl)
+│   │   ├── dto/ (request/, response/)
+│   │   └── mapper/ (PaymentMapper)
+│   └── voucher/                            # Module 7: Khuyến mãi & Quản lý Voucher
+│       ├── VoucherAdminController.java
+│       ├── VoucherController.java
+│       ├── entity/ (Voucher, VoucherUsage, DiscountType)
+│       ├── repository/ (VoucherRepository, VoucherUsageRepository)
+│       ├── strategy/ (DiscountStrategy, PercentageDiscountStrategy, FixedAmountDiscountStrategy, DiscountStrategyFactory)
+│       ├── service/ (VoucherAdminService, VoucherService)
 │       ├── dto/ (request/, response/)
-│       └── mapper/ (PaymentMapper)
+│       └── mapper/ (VoucherMapper)
 ├── security/                               # Cấu hình bảo mật, Bộ lọc JWT & Context Provider
-├── SecurityConfig.java
+│   ├── SecurityConfig.java
 │   ├── SecurityUtils.java
 │   ├── jwt/ (JwtTokenProvider, JwtAuthenticationFilter, ...)
 │   └── userdetails/ (CustomUserDetails, CustomUserDetailsService)
@@ -92,13 +101,16 @@ Mỗi module đều có một tài liệu phân tích riêng biệt (bài toán 
 - 📘 **Module 4 (Bookings & Concurrency Control):** [`docs/architecture/modules/module-4-bookings.md`](modules/module-4-bookings.md) *(Đã hoàn thành - Đặt sân online & Pessimistic Lock chống double-booking)*.
 - 📘 **Module 5 (Court Operations - POS, Check-in & Recurring):** [`docs/architecture/modules/module-5-bookings-pos.md`](modules/module-5-bookings-pos.md) *(Đã hoàn thành - Vận hành quầy POS, Check-in & Đặt cố định All-or-Nothing)*.
 - 📘 **Module 6 (Payments & Refunds):** [`docs/architecture/modules/module-6-payments.md`](modules/module-6-payments.md) *(Đã hoàn thành - Mock Gateway, Thanh toán Server-side & Hoàn tiền tự động hủy lịch)*.
+- 📘 **Module 7 (Promotions & Vouchers):** [`docs/architecture/modules/module-7-vouchers.md`](modules/module-7-vouchers.md) *(Đã hoàn thành - Strategy Pattern chiết khấu, Khóa kép bi quan & Chống thất thoát ngân sách)*.
 
 ### 📌 4. Tài Liệu Tích Hợp API Cho Frontend
-- 👉 Module 1 (Auth): [`docs/api/module-1-auth-rbac.md`](../api/module-1-auth-rbac.md)
+- 👉 Module 1 (Auth & RBAC): [`docs/api/module-1-auth-rbac.md`](../api/module-1-auth-rbac.md)
+- 👉 Module 2 (User Management): [`docs/api/module-2-user-management.md`](../api/module-2-user-management.md)
 - 👉 Module 3 (Courts & TimeSlots): [`docs/api/module-3-courts.md`](../api/module-3-courts.md)
 - 👉 Module 4 (Bookings Online): [`docs/api/module-4-bookings.md`](../api/module-4-bookings.md)
 - 👉 Module 5 (Court Operations & POS): [`docs/api/module-5-bookings-pos.md`](../api/module-5-bookings-pos.md)
 - 👉 Module 6 (Payments & Refunds): [`docs/api/module-6-payments.md`](../api/module-6-payments.md)
+- 👉 Module 7 (Promotions & Vouchers): [`docs/api/module-7-vouchers.md`](../api/module-7-vouchers.md)
 
 ---
 
@@ -107,6 +119,7 @@ Mỗi module đều có một tài liệu phân tích riêng biệt (bài toán 
 Nếu bạn là một AI Agent đang tiếp nhận dự án này:
 1. **Luôn tuân thủ nguyên tắc Dependency Inversion:** Mọi Service injection phải qua constructor (dùng `@RequiredArgsConstructor`), tuyệt đối không dùng `@Autowired` trên field.
 2. **Không để lộ JPA Entity ra ngoài API:** Controller chỉ được phép nhận và trả về DTO. Sử dụng MapStruct (trong package mapper của từng feature module) để chuyển đổi.
-3. **Mọi phản hồi API đều bọc qua `ApiResponse<T>`:** Không bao giờ trả raw Object hoặc raw ResponseEntity không có cấu trúc chuẩn; danh sách phân trang dùng `PageResponse<T>`.
+3. **Mọi phản hồi API đều bọc qua `ApiResponse<T>`:** Không bao giờ trả raw Object hoặc raw ResponseEntity không có cấu trúc chuẩn; danh sách phân tra
+\ng dùng `PageResponse<T>`.
 4. **Khi thêm tính năng mới:** Kiểm tra ma trận quyền tại [`rbac-matrix.md`](rbac-matrix.md) để gắn `@PreAuthorize` tương ứng trên Controller.
 5. **Sort ở các endpoint phân trang:** Bắt buộc validate qua `SortUtils.parseSort` với whitelist các trường cho phép, ngăn chặn lỗi 500 do client truyền field lạ.

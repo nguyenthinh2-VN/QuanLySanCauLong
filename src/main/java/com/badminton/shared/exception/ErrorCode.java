@@ -71,7 +71,18 @@ public enum ErrorCode {
     PAYMENT_NOT_FOUND("PAYMENT_NOT_FOUND", "Không tìm thấy thông tin giao dịch thanh toán", HttpStatus.NOT_FOUND),
     BOOKING_NOT_PAYABLE("BOOKING_NOT_PAYABLE", "Đơn đặt sân không ở trạng thái chờ thanh toán", HttpStatus.CONFLICT),
     BOOKING_ALREADY_PAID("BOOKING_ALREADY_PAID", "Đơn đặt sân này đã được thanh toán thành công trước đó", HttpStatus.CONFLICT),
-    REFUND_NOT_ALLOWED("REFUND_NOT_ALLOWED", "Giao dịch không đủ điều kiện hoàn tiền", HttpStatus.CONFLICT);
+    REFUND_NOT_ALLOWED("REFUND_NOT_ALLOWED", "Giao dịch không đủ điều kiện hoàn tiền", HttpStatus.CONFLICT),
+
+    // Module 7 - Promotions & Voucher Management
+    VOUCHER_NOT_FOUND("VOUCHER_NOT_FOUND", "Không tìm thấy voucher trong hệ thống", HttpStatus.NOT_FOUND),
+    VOUCHER_CODE_EXISTS("VOUCHER_CODE_EXISTS", "Mã voucher đã tồn tại trong hệ thống", HttpStatus.CONFLICT),
+    VOUCHER_NOT_ACTIVE("VOUCHER_NOT_ACTIVE", "Voucher hiện không hoạt động", HttpStatus.BAD_REQUEST),
+    VOUCHER_EXPIRED("VOUCHER_EXPIRED", "Voucher đã hết hạn sử dụng", HttpStatus.BAD_REQUEST),
+    VOUCHER_NOT_STARTED("VOUCHER_NOT_STARTED", "Voucher chưa đến thời gian áp dụng", HttpStatus.BAD_REQUEST),
+    VOUCHER_USAGE_EXCEEDED("VOUCHER_USAGE_EXCEEDED", "Voucher đã hết lượt sử dụng toàn hệ thống", HttpStatus.BAD_REQUEST),
+    VOUCHER_USER_LIMIT_EXCEEDED("VOUCHER_USER_LIMIT_EXCEEDED", "Bạn đã sử dụng hết lượt cho phép của voucher này", HttpStatus.BAD_REQUEST),
+    VOUCHER_MIN_AMOUNT_NOT_MET("VOUCHER_MIN_AMOUNT_NOT_MET", "Đơn đặt sân chưa đạt giá trị tối thiểu để áp dụng voucher", HttpStatus.BAD_REQUEST),
+    VOUCHER_ALREADY_APPLIED("VOUCHER_ALREADY_APPLIED", "Đơn đặt sân này đã được áp dụng voucher trước đó", HttpStatus.CONFLICT);
 
     private final String code;
     private final String message;
