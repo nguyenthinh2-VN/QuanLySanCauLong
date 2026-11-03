@@ -69,8 +69,21 @@ com.badminton
 │   │   ├── service/                        # PaymentService, PaymentServiceImpl
 │   │   └── PaymentController.java          # REST API Controller
 │   │
-│   ├── voucher/                            # [Module 7] Khuyến mãi & Quản lý Voucher (Sắp triển khai)
-│   └── dashboard/                          # [Module 8] Báo cáo doanh thu & Tỉ lệ lấp đầy
+│   ├── voucher/                            # [Module 7] Khuyến mãi & Quản lý Voucher
+│   │   ├── entity/                         # Voucher, VoucherUsage, DiscountType
+│   │   ├── repository/                     # VoucherRepository, VoucherUsageRepository
+│   │   ├── strategy/                       # Strategy Pattern chiết khấu (% và Fixed)
+│   │   ├── dto/                            # Request & Response DTOs
+│   │   ├── mapper/                         # VoucherMapper
+│   │   ├── service/                        # VoucherAdminService, VoucherService
+│   │   ├── VoucherAdminController.java     # REST API Controller (ADMIN)
+│   │   └── VoucherController.java          # REST API Controller (Customer / Public)
+│   │
+│   └── report/                             # [Module 8] Thống kê & Báo cáo Quản trị (Dashboard)
+│       ├── repository/projection/          # Projections JPQL tổng hợp
+│       ├── dto/                            # Request & Response DTOs
+│       ├── service/                        # ReportService, ReportServiceImpl
+│       └── ReportController.java           # REST API Controller (ADMIN)
 │
 ├── config/
 │   └── DataSeeder.java                     # Khởi tạo dữ liệu mẫu (Roles & Default Admin)
@@ -103,6 +116,8 @@ Mỗi module đều có một tài liệu phân tích riêng biệt (bài toán 
 - 📘 **Module 4 (Bookings & Concurrency Control):** [`docs/architecture/modules/module-4-bookings.md`](modules/module-4-bookings.md) *(Đã hoàn thành - Đặt sân online & Pessimistic Lock chống double-booking)*.
 - 📘 **Module 5 (Court Operations - POS, Check-in & Recurring):** [`docs/architecture/modules/module-5-bookings-pos.md`](modules/module-5-bookings-pos.md) *(Đã hoàn thành - Vận hành quầy POS, Check-in & Đặt cố định All-or-Nothing)*.
 - 📘 **Module 6 (Payments & Refunds):** [`docs/architecture/modules/module-6-payments.md`](modules/module-6-payments.md) *(Đã hoàn thành - Mock Gateway, Pessimistic Lock chống double-charge & Hoàn tiền tự động hủy lịch)*.
+- 📘 **Module 7 (Promotions & Vouchers):** [`docs/architecture/modules/module-7-vouchers.md`](modules/module-7-vouchers.md) *(Đã hoàn thành - Strategy Pattern chiết khấu, Khóa kép bi quan & Chống thất thoát ngân sách)*.
+- 📘 **Module 8 (Reports & Dashboard):** [`docs/architecture/modules/module-8-reports.md`](modules/module-8-reports.md) *(Đã hoàn thành - Phân tích doanh thu thuần, Tỉ lệ lấp đầy sân & Bucketing Java)*.
 
 ### 📌 4. Tài Liệu Tích Hợp API Cho Frontend
 - 👉 Module 1 (Auth & RBAC): [`docs/api/module-1-auth-rbac.md`](../api/module-1-auth-rbac.md)
@@ -111,6 +126,8 @@ Mỗi module đều có một tài liệu phân tích riêng biệt (bài toán 
 - 👉 Module 4 (Bookings Online): [`docs/api/module-4-bookings.md`](../api/module-4-bookings.md)
 - 👉 Module 5 (Court Operations & POS): [`docs/api/module-5-bookings-pos.md`](../api/module-5-bookings-pos.md)
 - 👉 Module 6 (Payments & Refunds): [`docs/api/module-6-payments.md`](../api/module-6-payments.md)
+- 👉 Module 7 (Promotions & Vouchers): [`docs/api/module-7-vouchers.md`](../api/module-7-vouchers.md)
+- 👉 Module 8 (Reports & Dashboard): [`docs/api/module-8-reports.md`](../api/module-8-reports.md)
 
 ---
 

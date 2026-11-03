@@ -119,6 +119,13 @@ Mỗi module đều có một tài liệu phân tích riêng biệt (bài toán 
 - 👉 Module 7 (Promotions & Vouchers): [`docs/api/module-7-vouchers.md`](../api/module-7-vouchers.md)
 - 👉 Module 8 (Reports & Dashboard): [`docs/api/module-8-reports.md`](../api/module-8-reports.md)
 
+### 📌 5. Báo Cáo Đo Lường Hiệu Năng & Chịu Tải (Load & Stress Test Benchmark)
+👉 **Đọc tại:** [`docs/architecture/PERFORMANCE_BENCHMARK.md`](PERFORMANCE_BENCHMARK.md)
+- Kết quả kiểm thử chịu tải **1,000 đến 10,000 requests đồng thời** qua Java 23 Virtual Threads.
+- Phân tích độ trễ P50, P95, P99 và thông lượng đạt **1,273+ RPS**.
+- Bằng chứng thực nghiệm khóa bi quan kép chống double-booking và bảo toàn 100% ngân sách voucher.
+- Gợi ý các bullet points chuyên nghiệp để đưa vào CV / Portfolio.
+
 ---
 
 ## 3. Hướng Dẫn Dành Cho AI Agent Khi Tiếp Quản Codebase
