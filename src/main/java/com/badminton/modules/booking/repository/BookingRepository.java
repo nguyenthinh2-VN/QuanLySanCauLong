@@ -1,6 +1,8 @@
 package com.badminton.modules.booking.repository;
 
 import com.badminton.modules.booking.entity.Booking;
+import com.badminton.modules.booking.entity.BookingStatus;
+import com.badminton.modules.report.repository.projection.DailyCourtOccupancyProjection;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
@@ -53,4 +55,28 @@ public interface BookingRepository extends JpaRepository<Booking, Long>, JpaSpec
             "                 com.badminton.modules.booking.entity.BookingStatus.CHECKED_IN)")
     List<Booking> findActiveBookingsByDateAndCourtIds(@Param("date") LocalDate date,
                                                       @Param("courtIds") Collection<Long> courtIds);
+
+    @Query("SELECT b.bookingDate AS bookingDate, b.court.id AS courtId, COUNT(b) AS bookedCount " +
+            "FROM Booking b " +
+            "WHERE b.bookingDate BETWEEN :from AND :to " +
+            "AND b.status IN :statuses " +
+            "GROUP BY b.bookingDate, b.court.id")
+    List<DailyCourtOccupancyProjection> findOccupancyAggregations(
+            @Param("from") LocalDate from,
+            @Param("to") LocalDate to,
+            @Param("statuses") Collection<BookingStatus> statuses
+    );
+
+    @Query("SELECT b.bookingDate AS bookingDate, b.court.id AS courtId, COUNT(b) AS bookedCount " +
+            "FROM Booking b " +
+            "WHERE b.bookingDate BETWEEN :from AND :to " +
+            "AND b.court.id = :courtId " +
+            "AND b.status IN :statuses " +
+            "GROUP BY b.bookingDate, b.court.id")
+    List<DailyCourtOccupancyProjection> findOccupancyAggregationsByCourt(
+            @Param("from") LocalDate from,
+            @Param("to") LocalDate to,
+            @Param("courtId") Long courtId,
+            @Param("statuses") Collection<BookingStatus> statuses
+    );
 }

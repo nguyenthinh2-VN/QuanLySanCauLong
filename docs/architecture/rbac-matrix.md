@@ -57,8 +57,8 @@ Hệ thống sử dụng enum `RoleType` lưu trong bảng `roles`, quan hệ Ma
 | 26| Xem danh sách Voucher đang chạy | `GET /api/v1/vouchers/active` | ✅ | ✅ | ✅ | ✅ | `permitAll` (Công khai) |
 | 27| Áp dụng Voucher vào đơn | `POST /api/v1/vouchers/apply` | ❌ | ✅ | ✅ | ✅ | `@PreAuthorize("isAuthenticated()")` |
 | **VI** | **Báo cáo (Dashboard)** | | | | | | *(Module 8)* |
-| 28| Doanh thu ngày/tuần/tháng | `GET /api/v1/reports/revenue` | ❌ | ❌ | ❌ | ✅ | `@PreAuthorize("hasRole('ADMIN')")` |
-| 29| Tỉ lệ lấp đầy sân (Occupancy) | `GET /api/v1/reports/occupancy` | ❌ | ❌ | ❌ | ✅ | `@PreAuthorize("hasRole('ADMIN')")` |
+| 28| Doanh thu ngày/tuần/tháng | `GET /api/v1/reports/revenue` | ❌ | ❌ | ❌ | ✅ | `@PreAuthorize("hasRole(T(com.badminton.shared.constant.RoleConstants).ADMIN)")` |
+| 29| Tỉ lệ lấp đầy sân (Occupancy) | `GET /api/v1/reports/occupancy` | ❌ | ❌ | ❌ | ✅ | `@PreAuthorize("hasRole(T(com.badminton.shared.constant.RoleConstants).ADMIN)")` |
 
 ---
 

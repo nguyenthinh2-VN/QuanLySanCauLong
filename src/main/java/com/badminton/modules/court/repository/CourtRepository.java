@@ -1,6 +1,7 @@
 package com.badminton.modules.court.repository;
 
 import com.badminton.modules.court.entity.Court;
+import com.badminton.modules.court.entity.CourtStatus;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
@@ -9,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -23,5 +25,9 @@ public interface CourtRepository extends JpaRepository<Court, Long>, JpaSpecific
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT c FROM Court c WHERE c.id = :id")
     Optional<Court> findByIdForUpdate(@Param("id") Long id);
+
+    long countByStatus(CourtStatus status);
+
+    List<Court> findByStatus(CourtStatus status);
 }
 

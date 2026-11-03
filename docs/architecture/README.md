@@ -45,15 +45,20 @@ src/main/java/com/badminton/
 │   │   ├── service/ (PaymentService, PaymentServiceImpl)
 │   │   ├── dto/ (request/, response/)
 │   │   └── mapper/ (PaymentMapper)
-│   └── voucher/                            # Module 7: Khuyến mãi & Quản lý Voucher
-│       ├── VoucherAdminController.java
-│       ├── VoucherController.java
-│       ├── entity/ (Voucher, VoucherUsage, DiscountType)
-│       ├── repository/ (VoucherRepository, VoucherUsageRepository)
-│       ├── strategy/ (DiscountStrategy, PercentageDiscountStrategy, FixedAmountDiscountStrategy, DiscountStrategyFactory)
-│       ├── service/ (VoucherAdminService, VoucherService)
+│   ├── voucher/                            # Module 7: Khuyến mãi & Quản lý Voucher
+│   │   ├── VoucherAdminController.java
+│   │   ├── VoucherController.java
+│   │   ├── entity/ (Voucher, VoucherUsage, DiscountType)
+│   │   ├── repository/ (VoucherRepository, VoucherUsageRepository)
+│   │   ├── strategy/ (DiscountStrategy, PercentageDiscountStrategy, FixedAmountDiscountStrategy, DiscountStrategyFactory)
+│   │   ├── service/ (VoucherAdminService, VoucherService)
+│   │   ├── dto/ (request/, response/)
+│   │   └── mapper/ (VoucherMapper)
+│   └── report/                             # Module 8: Báo cáo Thống kê & Dashboard
+│       ├── ReportController.java
+│       ├── service/ (ReportService, ReportServiceImpl)
 │       ├── dto/ (request/, response/)
-│       └── mapper/ (VoucherMapper)
+│       └── repository/projection/ (DailyRevenueProjection, PaymentMethodRevenueProjection, DailyCourtOccupancyProjection)
 ├── security/                               # Cấu hình bảo mật, Bộ lọc JWT & Context Provider
 │   ├── SecurityConfig.java
 │   ├── SecurityUtils.java
@@ -102,6 +107,7 @@ Mỗi module đều có một tài liệu phân tích riêng biệt (bài toán 
 - 📘 **Module 5 (Court Operations - POS, Check-in & Recurring):** [`docs/architecture/modules/module-5-bookings-pos.md`](modules/module-5-bookings-pos.md) *(Đã hoàn thành - Vận hành quầy POS, Check-in & Đặt cố định All-or-Nothing)*.
 - 📘 **Module 6 (Payments & Refunds):** [`docs/architecture/modules/module-6-payments.md`](modules/module-6-payments.md) *(Đã hoàn thành - Mock Gateway, Thanh toán Server-side & Hoàn tiền tự động hủy lịch)*.
 - 📘 **Module 7 (Promotions & Vouchers):** [`docs/architecture/modules/module-7-vouchers.md`](modules/module-7-vouchers.md) *(Đã hoàn thành - Strategy Pattern chiết khấu, Khóa kép bi quan & Chống thất thoát ngân sách)*.
+- 📘 **Module 8 (Reports & Dashboard):** [`docs/architecture/modules/module-8-reports.md`](modules/module-8-reports.md) *(Đã hoàn thành - Phân tích doanh thu thuần, Tỉ lệ lấp đầy sân & Bucketing Java)*.
 
 ### 📌 4. Tài Liệu Tích Hợp API Cho Frontend
 - 👉 Module 1 (Auth & RBAC): [`docs/api/module-1-auth-rbac.md`](../api/module-1-auth-rbac.md)
@@ -111,6 +117,7 @@ Mỗi module đều có một tài liệu phân tích riêng biệt (bài toán 
 - 👉 Module 5 (Court Operations & POS): [`docs/api/module-5-bookings-pos.md`](../api/module-5-bookings-pos.md)
 - 👉 Module 6 (Payments & Refunds): [`docs/api/module-6-payments.md`](../api/module-6-payments.md)
 - 👉 Module 7 (Promotions & Vouchers): [`docs/api/module-7-vouchers.md`](../api/module-7-vouchers.md)
+- 👉 Module 8 (Reports & Dashboard): [`docs/api/module-8-reports.md`](../api/module-8-reports.md)
 
 ---
 
