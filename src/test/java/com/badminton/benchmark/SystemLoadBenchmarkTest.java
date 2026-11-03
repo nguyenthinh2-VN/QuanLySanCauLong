@@ -3,6 +3,7 @@ package com.badminton.benchmark;
 import com.badminton.modules.auth.entity.User;
 import com.badminton.modules.auth.repository.UserRepository;
 import com.badminton.modules.booking.dto.request.CreateBookingRequest;
+import com.badminton.modules.booking.dto.response.BookingResponse;
 import com.badminton.modules.booking.entity.Booking;
 import com.badminton.modules.booking.entity.BookingStatus;
 import com.badminton.modules.booking.repository.BookingRepository;
@@ -35,10 +36,12 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -165,9 +168,10 @@ public class SystemLoadBenchmarkTest {
     @DisplayName("BENCHMARK 3: Tranh chấp Giờ Vàng (Hotspot Booking) - 1,000 user đặt cùng 1 slot sân")
     void benchmark3_hotspotBookingContention_1000Requests() throws InterruptedException {
         int totalRequests = 1000;
-        LocalDate bookingDate = LocalDate.now().plusDays(5);
+        // Chọn ngày xa hẳn trong hạn 30 ngày để không va chạm các test khác
+        LocalDate bookingDate = LocalDate.now().plusDays(28);
 
-        // Đảm bảo slot chưa bị ai đặt trước đó
+        // Đảm bảo slot chưa bị ai đặt trước đó (chỉ dọn đúng slot này nếu có)
         bookingRepository.findAll().stream()
                 .filter(b -> b.getCourt().getId().equals(court.getId())
                         && b.getBookingDate().equals(bookingDate)
@@ -189,52 +193,63 @@ public class SystemLoadBenchmarkTest {
         AtomicInteger successCount = new AtomicInteger(0);
         AtomicInteger slotBookedConflictCount = new AtomicInteger(0);
         AtomicInteger unexpectedErrorCount = new AtomicInteger(0);
+        AtomicReference<Long> createdBookingId = new AtomicReference<>();
 
-        try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
-            for (int i = 0; i < totalRequests; i++) {
-                executor.submit(() -> {
-                    authenticateAs(customer);
-                    readyLatch.countDown();
-                    try {
-                        startLatch.await();
-                        long start = System.nanoTime();
-                        bookingService.createBooking(request);
-                        long elapsed = System.nanoTime() - start;
-                        latenciesNano.add(elapsed);
-                        successCount.incrementAndGet();
-                    } catch (AppException e) {
-                        long elapsed = System.nanoTime(); // approx
-                        latenciesNano.add(10_000_000L); // ~10ms for conflict
-                        if (e.getErrorCode() == ErrorCode.SLOT_ALREADY_BOOKED) {
-                            slotBookedConflictCount.incrementAndGet();
-                        } else {
+        try {
+            try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
+                for (int i = 0; i < totalRequests; i++) {
+                    executor.submit(() -> {
+                        authenticateAs(customer);
+                        readyLatch.countDown();
+                        long start = 0;
+                        try {
+                            startLatch.await();
+                            start = System.nanoTime();
+                            BookingResponse response = bookingService.createBooking(request);
+                            long elapsed = System.nanoTime() - start;
+                            latenciesNano.add(elapsed);
+                            createdBookingId.set(response.getId());
+                            successCount.incrementAndGet();
+                        } catch (AppException e) {
+                            long elapsed = System.nanoTime() - start;
+                            latenciesNano.add(elapsed);
+                            if (e.getErrorCode() == ErrorCode.SLOT_ALREADY_BOOKED) {
+                                slotBookedConflictCount.incrementAndGet();
+                            } else {
+                                unexpectedErrorCount.incrementAndGet();
+                            }
+                        } catch (Exception e) {
+                            long elapsed = (start > 0) ? (System.nanoTime() - start) : 0;
+                            latenciesNano.add(elapsed);
                             unexpectedErrorCount.incrementAndGet();
+                        } finally {
+                            doneLatch.countDown();
                         }
-                    } catch (Exception e) {
-                        unexpectedErrorCount.incrementAndGet();
-                    } finally {
-                        doneLatch.countDown();
-                    }
-                });
+                    });
+                }
+
+                readyLatch.await();
+                long benchmarkStart = System.currentTimeMillis();
+                startLatch.countDown();
+                doneLatch.await();
+                long totalDurationMs = System.currentTimeMillis() - benchmarkStart;
+
+                BenchmarkReport report = calculateReport(
+                        "KỊCH BẢN 3: TRANH CHẤP GIỜ VÀNG (1,000 LUỒNG CÙNG ĐẶT 1 KHUNG GIỜ)",
+                        totalRequests, totalRequests, totalDurationMs,
+                        latenciesNano, successCount.get(), slotBookedConflictCount.get(), unexpectedErrorCount.get());
+                report.printToConsole();
+
+                // Tính toàn vẹn dữ liệu: Đúng 1 người thắng, 999 người bị từ chối 409, 0 lỗi hệ thống 500!
+                assertThat(successCount.get()).isEqualTo(1);
+                assertThat(slotBookedConflictCount.get()).isEqualTo(totalRequests - 1);
+                assertThat(unexpectedErrorCount.get()).isZero();
             }
-
-            readyLatch.await();
-            long benchmarkStart = System.currentTimeMillis();
-            startLatch.countDown();
-            doneLatch.await();
-            long totalDurationMs = System.currentTimeMillis() - benchmarkStart;
-
-            BenchmarkReport report = calculateReport(
-                    "KỊCH BẢN 3: TRANH CHẤP GIỜ VÀNG (1,000 LUỒNG CÙNG ĐẶT 1 KHUNG GIỜ)",
-                    totalRequests, totalRequests, totalDurationMs,
-                    latenciesNano, successCount.get(), slotBookedConflictCount.get(), unexpectedErrorCount.get());
-            report.printToConsole();
-
-            // Tính toàn vẹn dữ liệu: Đúng 1 người thắng, 999 người bị từ chối 409, 0 lỗi hệ
-            // thống 500!
-            assertThat(successCount.get()).isEqualTo(1);
-            assertThat(slotBookedConflictCount.get()).isEqualTo(totalRequests - 1);
-            assertThat(unexpectedErrorCount.get()).isZero();
+        } finally {
+            // Dọn đúng booking do test này tạo ra, không xóa dữ liệu test khác
+            if (createdBookingId.get() != null) {
+                bookingRepository.deleteById(createdBookingId.get());
+            }
         }
     }
 
@@ -244,11 +259,11 @@ public class SystemLoadBenchmarkTest {
         int totalRequests = 1000;
         int limit = 10;
 
-        voucherUsageRepository.deleteAll();
-        voucherRepository.deleteAll();
+        // Sinh code duy nhất mỗi lần chạy để chống test pollution
+        String voucherCode = "FLASH10_" + UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase();
 
         Voucher voucher = voucherRepository.save(Voucher.builder()
-                .code("FLASH10")
+                .code(voucherCode)
                 .name("Flash sale 10 slot")
                 .discountType(DiscountType.FIXED_AMOUNT)
                 .discountValue(new BigDecimal("50000.00"))
@@ -273,6 +288,7 @@ public class SystemLoadBenchmarkTest {
                     .totalAmount(new BigDecimal("100000.00"))
                     .build()));
         }
+        List<Long> bookingIds = bookings.stream().map(Booking::getId).toList();
 
         CountDownLatch readyLatch = new CountDownLatch(totalRequests);
         CountDownLatch startLatch = new CountDownLatch(1);
@@ -283,51 +299,65 @@ public class SystemLoadBenchmarkTest {
         AtomicInteger usageExceededCount = new AtomicInteger(0);
         AtomicInteger unexpectedErrorCount = new AtomicInteger(0);
 
-        try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
-            for (int i = 0; i < totalRequests; i++) {
-                final Long bookingId = bookings.get(i).getId();
-                executor.submit(() -> {
-                    authenticateAs(customer);
-                    readyLatch.countDown();
-                    try {
-                        startLatch.await();
-                        long start = System.nanoTime();
-                        voucherService.applyVoucher(new ApplyVoucherRequest(bookingId, "FLASH10"));
-                        long elapsed = System.nanoTime() - start;
-                        latenciesNano.add(elapsed);
-                        successCount.incrementAndGet();
-                    } catch (AppException e) {
-                        latenciesNano.add(15_000_000L);
-                        if (e.getErrorCode() == ErrorCode.VOUCHER_USAGE_EXCEEDED) {
-                            usageExceededCount.incrementAndGet();
-                        } else {
+        try {
+            try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
+                for (int i = 0; i < totalRequests; i++) {
+                    final Long bookingId = bookingIds.get(i);
+                    executor.submit(() -> {
+                        authenticateAs(customer);
+                        readyLatch.countDown();
+                        long start = 0;
+                        try {
+                            startLatch.await();
+                            start = System.nanoTime();
+                            voucherService.applyVoucher(new ApplyVoucherRequest(bookingId, voucherCode));
+                            long elapsed = System.nanoTime() - start;
+                            latenciesNano.add(elapsed);
+                            successCount.incrementAndGet();
+                        } catch (AppException e) {
+                            long elapsed = System.nanoTime() - start;
+                            latenciesNano.add(elapsed);
+                            if (e.getErrorCode() == ErrorCode.VOUCHER_USAGE_EXCEEDED) {
+                                usageExceededCount.incrementAndGet();
+                            } else {
+                                unexpectedErrorCount.incrementAndGet();
+                            }
+                        } catch (Exception e) {
+                            long elapsed = (start > 0) ? (System.nanoTime() - start) : 0;
+                            latenciesNano.add(elapsed);
                             unexpectedErrorCount.incrementAndGet();
+                        } finally {
+                            doneLatch.countDown();
                         }
-                    } catch (Exception e) {
-                        unexpectedErrorCount.incrementAndGet();
-                    } finally {
-                        doneLatch.countDown();
-                    }
-                });
+                    });
+                }
+
+                readyLatch.await();
+                long benchmarkStart = System.currentTimeMillis();
+                startLatch.countDown();
+                doneLatch.await();
+                long totalDurationMs = System.currentTimeMillis() - benchmarkStart;
+
+                BenchmarkReport report = calculateReport(
+                        "KỊCH BẢN 4: FLASH SALE VOUCHER (1,000 LUỒNG TRANH 10 SUẤT GIẢM GIÁ)",
+                        totalRequests, totalRequests, totalDurationMs,
+                        latenciesNano, successCount.get(), usageExceededCount.get(), unexpectedErrorCount.get());
+                report.printToConsole();
+
+                // Đúng 10 suất thành công, 990 suất còn lại bị từ chối 400 VOUCHER_USAGE_EXCEEDED, 0 thất thoát!
+                assertThat(successCount.get()).isEqualTo(limit);
+                assertThat(usageExceededCount.get()).isEqualTo(totalRequests - limit);
+                assertThat(unexpectedErrorCount.get()).isZero();
             }
-
-            readyLatch.await();
-            long benchmarkStart = System.currentTimeMillis();
-            startLatch.countDown();
-            doneLatch.await();
-            long totalDurationMs = System.currentTimeMillis() - benchmarkStart;
-
-            BenchmarkReport report = calculateReport(
-                    "KỊCH BẢN 4: FLASH SALE VOUCHER (1,000 LUỒNG TRANH 10 SUẤT GIẢM GIÁ)",
-                    totalRequests, totalRequests, totalDurationMs,
-                    latenciesNano, successCount.get(), usageExceededCount.get(), unexpectedErrorCount.get());
-            report.printToConsole();
-
-            // Đúng 10 suất thành công, 990 suất còn lại bị từ chối 400
-            // VOUCHER_USAGE_EXCEEDED, 0 thất thoát!
-            assertThat(successCount.get()).isEqualTo(limit);
-            assertThat(usageExceededCount.get()).isEqualTo(totalRequests - limit);
-            assertThat(unexpectedErrorCount.get()).isZero();
+        } finally {
+            // Dọn dẹp đúng dữ liệu do chính test này tạo ra
+            for (Long bId : bookingIds) {
+                voucherUsageRepository.findByBookingId(bId).ifPresent(voucherUsageRepository::delete);
+            }
+            if (voucher.getId() != null) {
+                voucherRepository.deleteById(voucher.getId());
+            }
+            bookingRepository.deleteAllById(bookingIds);
         }
     }
 
