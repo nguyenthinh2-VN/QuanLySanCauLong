@@ -1,0 +1,48 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* shadcn/ui Slate/Zinc Neutral Base + Deep Court Emerald Primary (#059669) */
+    --background: 210 40% 98%;          /* #F8FAFC slate-50 */
+    --foreground: 222.2 84% 4.9%;       /* #0F172A slate-900 */
+
+    --card: 0 0% 100%;                  /* #FFFFFF white */
+    --card-foreground: 222.2 84% 4.9%;  /* #0F172A slate-900 */
+
+    --popover: 0 0% 100%;               /* #FFFFFF white */
+    --popover-foreground: 222.2 84% 4.9%;
+
+    --primary: 160 84% 39%;             /* #059669 emerald-600 (Court Emerald) */
+    --primary-foreground: 0 0% 100%;    /* #FFFFFF */
+
+    --secondary: 210 40% 96.1%;         /* #F1F5F9 slate-100 */
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --muted: 210 40% 96.1%;             /* #F1F5F9 slate-100 */
+    --muted-foreground: 215.4 16.3% 46.9%; /* #64748B slate-500 */
+
+    --accent: 152 81% 96%;              /* #ECFDF5 emerald-50 */
+    --accent-foreground: 163 94% 24%;   /* #065F46 emerald-800 */
+
+    --destructive: 346.8 77.2% 49.8%;   /* #E11D48 rose-600 */
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;        /* #E2E8F0 slate-200 */
+    --input: 214.3 31.8% 91.4%;         /* #E2E8F0 slate-200 */
+    --ring: 160 84% 39%;                /* #059669 emerald-600 */
+
+    --radius: 0.625rem;                 /* 10px */
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+

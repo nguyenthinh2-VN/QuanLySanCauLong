@@ -126,6 +126,11 @@ Mỗi module đều có một tài liệu phân tích riêng biệt (bài toán 
 - Bằng chứng thực nghiệm khóa bi quan kép chống double-booking và bảo toàn 100% ngân sách voucher.
 - Gợi ý các bullet points chuyên nghiệp để đưa vào CV / Portfolio.
 
+### 📌 6. Kiến Trúc & Hệ Thống Thiết Kế Frontend (`FE/`)
+- 👉 Tổng quan Kiến trúc & Bản đồ Trang Frontend: [`docs/frontend/README.md`](../frontend/README.md)
+- 👉 Hệ thống Thiết kế UI/UX & Bảng màu `shadcn/ui` Zinc: [`docs/frontend/design-system.md`](../frontend/design-system.md)
+- 👉 Đặc tả Chi tiết FE Phase 1 (Auth + App Shell + RBAC Routes): [`docs/frontend/phase-1-auth-appshell.md`](../frontend/phase-1-auth-appshell.md)
+
 ---
 
 ## 3. Hướng Dẫn Dành Cho AI Agent Khi Tiếp Quản Codebase

@@ -35,3 +35,21 @@ build/
 .agent
 # CocoIndex Code (ccc)
 /.cocoindex_code/
+/.code-review-graph/
+
+### Frontend (Node / Vite / TypeScript) ###
+node_modules/
+**/node_modules/
+FE/dist/
+FE/dist-ssr/
+FE/.vite/
+*.local
+FE/.env
+!FE/.env.example
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.DS_Store
+Thumbs.db
+
