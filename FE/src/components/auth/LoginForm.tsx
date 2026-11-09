@@ -10,7 +10,11 @@ import { PasswordField } from '@/components/auth/PasswordField';
 
 export interface LoginFormProps {
   initialSuccessMessage?: string | null;
-  onLoginSubmit: (email: string, password: string) => Promise<void>;
+  onLoginSubmit: (
+    email: string,
+    password: string,
+    rememberMe: boolean
+  ) => Promise<void>;
   extractError: (error: unknown) => string;
 }
 
@@ -36,7 +40,7 @@ export function LoginForm({
 
     setSubmitting(true);
     try {
-      await onLoginSubmit(email, password);
+      await onLoginSubmit(email, password, rememberMe);
     } catch (error) {
       setErrorMessage(extractError(error));
     } finally {
@@ -78,7 +82,7 @@ export function LoginForm({
           rightLabelSlot={
             <Link
               to="/forgot-password"
-              className="text-xs font-medium text-emerald-600 hover:text-emerald-700 hover:underline"
+              className="text-xs font-medium text-zinc-700 hover:text-zinc-900 hover:underline"
             >
               Quên mật khẩu?
             </Link>

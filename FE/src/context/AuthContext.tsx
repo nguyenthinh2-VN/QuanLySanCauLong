@@ -25,7 +25,11 @@ import type {
 export interface AuthContextValue {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<User>;
+  login: (
+    email: string,
+    password: string,
+    rememberMe?: boolean
+  ) => Promise<User>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<User | null>;
 }
@@ -79,7 +83,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [refreshUser]);
 
   const login = useCallback(
-    async (email: string, password: string): Promise<User> => {
+    async (
+      email: string,
+      password: string,
+      rememberMe = true
+    ): Promise<User> => {
       const response = await api.post<ApiResponse<AuthResponseData>>(
         '/auth/login',
         {
@@ -94,11 +102,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       const { accessToken, refreshToken, user: rawUser } = result.data;
-      setTokens(accessToken, refreshToken);
+      setTokens(accessToken, refreshToken, rememberMe);
 
       if (rawUser) {
         const normalized = normalizeUser(rawUser);
-        setStoredUser(normalized);
+        setStoredUser(normalized, rememberMe);
         setUser(normalized);
         return normalized;
       }

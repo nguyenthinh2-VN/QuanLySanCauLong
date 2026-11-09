@@ -26,9 +26,9 @@ export function AuthCardLayout({
     <div className="flex min-h-[100dvh] w-full items-center justify-center bg-slate-50 px-4 py-10">
       {topNotification}
 
-      <Card className="w-full max-w-md border-t-4 border-t-emerald-600 shadow-sm">
+      <Card className="w-full max-w-md border-t-4 border-t-zinc-900 shadow-sm">
         <CardHeader className="space-y-2 text-center">
-          <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-sm">
+          <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-zinc-900 text-white shadow-sm">
             <svg
               viewBox="0 0 24 24"
               fill="none"

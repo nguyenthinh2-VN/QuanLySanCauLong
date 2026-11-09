@@ -9,6 +9,8 @@ import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage';
 import { ForbiddenPage } from '@/pages/errors/ForbiddenPage';
 import { NotFoundPage } from '@/pages/errors/NotFoundPage';
 import { DashboardPage } from '@/pages/dashboard/DashboardPage';
+import { CustomerBookingPage } from '@/pages/booking/CustomerBookingPage';
+import { MyBookingsPage } from '@/pages/booking/MyBookingsPage';
 
 export function AppRouter() {
   return (
@@ -130,28 +132,8 @@ export function AppRouter() {
 
           {/* CUSTOMER Routes */}
           <Route element={<RoleRoute allowed={['CUSTOMER']} />}>
-            <Route
-              path="booking"
-              element={
-                <FeaturePlaceholder
-                  title="Đặt sân Trực tuyến"
-                  description="Chọn ngày, xem lưới sân trống theo khung giờ thời gian thực, áp mã giảm giá và giữ chỗ nhanh chóng."
-                  moduleTag="Module 4 · Customer Booking"
-                  endpointHint="GET /api/v1/courts/availability & POST /api/v1/bookings"
-                />
-              }
-            />
-            <Route
-              path="my-bookings"
-              element={
-                <FeaturePlaceholder
-                  title="Lịch đặt của tôi"
-                  description="Xem danh sách các lượt đặt sân sắp tới, lịch sử đặt sân và chủ động hủy lịch khi còn trong thời hạn cho phép."
-                  moduleTag="Module 4 · My Bookings"
-                  endpointHint="GET /api/v1/bookings/my"
-                />
-              }
-            />
+            <Route path="booking" element={<CustomerBookingPage />} />
+            <Route path="my-bookings" element={<MyBookingsPage />} />
           </Route>
         </Route>
       </Route>

@@ -22,8 +22,12 @@ export function LoginPage() {
     return <Navigate to={redirectTarget} replace />;
   }
 
-  async function handleLogin(email: string, password: string) {
-    await login(email, password);
+  async function handleLogin(
+    email: string,
+    password: string,
+    rememberMe: boolean
+  ) {
+    await login(email, password, rememberMe);
     const target = state?.from?.pathname || '/';
     navigate(target, { replace: true });
   }
@@ -37,7 +41,7 @@ export function LoginPage() {
           <span>Chưa có tài khoản?</span>
           <Link
             to="/register"
-            className="ml-1.5 font-semibold text-emerald-600 hover:text-emerald-700 hover:underline"
+            className="ml-1.5 font-semibold text-zinc-900 hover:text-zinc-700 hover:underline"
           >
             Đăng ký ngay
           </Link>

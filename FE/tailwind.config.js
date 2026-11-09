@@ -6,9 +6,8 @@ export default {
     extend: {
       fontFamily: {
         sans: [
-          '"Be Vietnam Pro"',
-          '"Plus Jakarta Sans"',
           '"Inter"',
+          '"Plus Jakarta Sans"',
           'system-ui',
           '-apple-system',
           'BlinkMacSystemFont',
@@ -18,7 +17,13 @@ export default {
         ],
         display: [
           '"Plus Jakarta Sans"',
-          '"Be Vietnam Pro"',
+          '"Inter"',
+          'system-ui',
+          'sans-serif',
+        ],
+        mono: [
+          '"Inter"',
+          '"Plus Jakarta Sans"',
           'system-ui',
           'sans-serif',
         ],
@@ -59,7 +64,9 @@ export default {
           DEFAULT: 'hsl(var(--destructive))',
           foreground: 'hsl(var(--destructive-foreground))',
         },
-        border: 'hsl(var(--border))',
+        border: {
+          DEFAULT: 'hsl(var(--border))',
+        },
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
       },
@@ -67,4 +74,3 @@ export default {
   },
   plugins: [require('tailwindcss-animate')],
 };
-

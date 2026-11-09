@@ -45,20 +45,55 @@ export function getPrimaryRole(roles: Role[]): Role {
 }
 
 export function getAccessToken(): string | null {
-  return localStorage.getItem(ACCESS_TOKEN_KEY);
+  return (
+    localStorage.getItem(ACCESS_TOKEN_KEY) ??
+    sessionStorage.getItem(ACCESS_TOKEN_KEY)
+  );
 }
 
 export function getRefreshToken(): string | null {
-  return localStorage.getItem(REFRESH_TOKEN_KEY);
+  return (
+    localStorage.getItem(REFRESH_TOKEN_KEY) ??
+    sessionStorage.getItem(REFRESH_TOKEN_KEY)
+  );
 }
 
-export function setTokens(accessToken: string, refreshToken: string): void {
-  localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
-  localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+function resolveTargetStorage(rememberMe?: boolean): Storage {
+  if (typeof rememberMe === 'boolean') {
+    return rememberMe ? localStorage : sessionStorage;
+  }
+  const hasSessionToken =
+    sessionStorage.getItem(REFRESH_TOKEN_KEY) !== null ||
+    sessionStorage.getItem(ACCESS_TOKEN_KEY) !== null;
+  const hasLocalToken =
+    localStorage.getItem(REFRESH_TOKEN_KEY) !== null ||
+    localStorage.getItem(ACCESS_TOKEN_KEY) !== null;
+
+  if (hasSessionToken && !hasLocalToken) {
+    return sessionStorage;
+  }
+  return localStorage;
+}
+
+export function setTokens(
+  accessToken: string,
+  refreshToken: string,
+  rememberMe?: boolean
+): void {
+  const target = resolveTargetStorage(rememberMe);
+  const other = target === localStorage ? sessionStorage : localStorage;
+
+  other.removeItem(ACCESS_TOKEN_KEY);
+  other.removeItem(REFRESH_TOKEN_KEY);
+
+  target.setItem(ACCESS_TOKEN_KEY, accessToken);
+  target.setItem(REFRESH_TOKEN_KEY, refreshToken);
 }
 
 export function getStoredUser(): User | null {
-  const raw = localStorage.getItem(USER_STORAGE_KEY);
+  const raw =
+    localStorage.getItem(USER_STORAGE_KEY) ??
+    sessionStorage.getItem(USER_STORAGE_KEY);
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw) as RawUser;
@@ -68,14 +103,25 @@ export function getStoredUser(): User | null {
   }
 }
 
-export function setStoredUser(user: User): void {
-  localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
+export function setStoredUser(user: User, rememberMe?: boolean): void {
+  const target = resolveTargetStorage(rememberMe);
+  const other = target === localStorage ? sessionStorage : localStorage;
+
+  other.removeItem(USER_STORAGE_KEY);
+  target.setItem(USER_STORAGE_KEY, JSON.stringify(user));
 }
 
-export function clearAuthStorage(): void {
+export function clearTokens(): void {
   localStorage.removeItem(ACCESS_TOKEN_KEY);
   localStorage.removeItem(REFRESH_TOKEN_KEY);
   localStorage.removeItem(USER_STORAGE_KEY);
+  sessionStorage.removeItem(ACCESS_TOKEN_KEY);
+  sessionStorage.removeItem(REFRESH_TOKEN_KEY);
+  sessionStorage.removeItem(USER_STORAGE_KEY);
+}
+
+export function clearAuthStorage(): void {
+  clearTokens();
 }
 
 export function getInitials(fullName: string | undefined): string {

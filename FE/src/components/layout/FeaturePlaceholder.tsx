@@ -26,7 +26,7 @@ export function FeaturePlaceholder({
       <Card className="border-slate-200/80 shadow-sm">
         <CardHeader className="space-y-3 pb-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <Badge variant="emerald">{moduleTag}</Badge>
+            <Badge variant="zinc">{moduleTag}</Badge>
             <Badge variant="amber">Phase sau</Badge>
           </div>
           <CardTitle className="text-xl font-bold text-slate-900">

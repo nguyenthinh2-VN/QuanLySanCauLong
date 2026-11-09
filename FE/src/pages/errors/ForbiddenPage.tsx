@@ -13,7 +13,7 @@ import {
 export function ForbiddenPage() {
   return (
     <div className="flex min-h-[100dvh] w-full items-center justify-center bg-slate-50 px-4 py-10">
-      <Card className="w-full max-w-md border-t-4 border-t-rose-500 text-center shadow-sm">
+      <Card className="w-full max-w-md border-t-4 border-t-red-600 text-center shadow-sm">
         <CardHeader className="space-y-3">
           <div className="mx-auto">
             <Badge variant="destructive" className="px-3 py-1 text-xs font-semibold tracking-wider">

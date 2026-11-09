@@ -6,7 +6,7 @@ export interface AuthAlertProps {
 }
 
 const VARIANT_CLASSES: Record<AuthAlertProps['variant'], string> = {
-  error: 'border-rose-200 bg-rose-50 text-rose-700',
+  error: 'border-red-200 bg-red-50 text-red-700',
   success: 'border-emerald-200 bg-emerald-50 text-emerald-800',
   warning: 'border-amber-200 bg-amber-50 text-amber-800',
 };

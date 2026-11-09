@@ -2,7 +2,7 @@
 
 > **Dành cho:** Frontend Engineers & AI Coding Agents tham gia phát triển giao diện hệ thống Quản lý Sân Cầu Lông `QuanLySanCauLong`.  
 > **Thư mục mã nguồn:** [`FE/`](../../FE)  
-> **Triết lý thiết kế:** **Modern Sport-Tech SaaS (shadcn/ui Slate/Zinc + Court Emerald `#059669` + Soft Tonal Badges)** — Hiện đại, có màu sắc tươi mới lấy cảm hứng từ thảm sân cầu lông thi đấu tiêu chuẩn BWF nhưng được tiết chế độ bão hòa dịu mắt, không dùng màu đen đơn điệu và không dùng neon chói lóa.
+> **Triết lý thiết kế:** **Modern Sport-Tech SaaS (shadcn/ui Zinc/Slate `#18181B` + Soft Tonal Badges)** — Tối giản, sắc nét theo chuẩn `shadcn/ui Zinc` mặc định, kết hợp các nhãn ngữ nghĩa Pastel dịu mắt và phân cấp Typography rõ ràng.
 
 ---
 
@@ -93,7 +93,7 @@ FE/
     │   └── auth.ts                     # TypeScript interfaces khớp 100% với Backend DTO
     ├── App.tsx
     ├── main.tsx
-    └── index.css                       # Khai báo CSS Variables tông màu Court Emerald + Slate/Zinc
+    └── index.css                       # Khai báo CSS Variables tông màu chuẩn shadcn/ui Zinc + Slate
 ```
 
 ---
@@ -122,8 +122,8 @@ Hệ thống Frontend bao gồm tổng cộng **16 đường dẫn (Routes)**, c
 | 11 | `/reports` | Báo cáo thống kê | ✅ | ❌ | ❌ | Placeholder + Badge `"Phase sau"` |
 | 12 | `/pos` | Đặt sân tại quầy (POS) | ❌ *(hoặc ✅)* | ✅ | ❌ | Placeholder + Badge `"Phase sau"` |
 | 13 | `/check-in` | Check-in khách đến sân | ❌ *(hoặc ✅)* | ✅ | ❌ | Placeholder + Badge `"Phase sau"` |
-| 14 | `/booking` | Đặt sân trực tuyến | ❌ | ❌ | ✅ | Placeholder + Badge `"Phase sau"` |
-| 15 | `/my-bookings` | Lịch đặt của tôi | ❌ | ❌ | ✅ | Placeholder + Badge `"Phase sau"` |
+| 14 | `/booking` | Đặt sân trực tuyến | ❌ | ❌ | ✅ | **Hoàn thiện 100% (Nối API thật)** |
+| 15 | `/my-bookings` | Lịch đặt của tôi | ❌ | ❌ | ✅ | **Hoàn thiện 100% (Nối API thật)** |
 
 ### 3.3. Nhóm Trang Lỗi (Error Routes — 2 trang)
 | STT | Đường dẫn | Tên màn hình | Mô tả |
