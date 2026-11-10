@@ -1,11 +1,13 @@
 import axios from 'axios';
 import api from '@/lib/api';
-import type { ApiResponse } from '@/types/auth';
+import type { ApiResponse, RawUser, User } from '@/types/auth';
+import { normalizeUser } from '@/lib/auth';
 import type {
   BookingResponse,
   BookingStatus,
   CourtAvailabilityResponse,
   CreateBookingRequest,
+  CreatePosBookingRequest,
   MyBookingsQueryParams,
   PageResponse,
   SlotStatus,
@@ -207,4 +209,63 @@ export async function submitCancelBooking(
   }
   return response.data.data;
 }
+
+export async function createPosBooking(
+  payload: CreatePosBookingRequest
+): Promise<BookingResponse> {
+  const response = await api.post<ApiResponse<BookingResponse>>(
+    '/bookings/pos',
+    payload
+  );
+  if (!response.data.success || !response.data.data) {
+    throw new Error(
+      response.data.message || 'Không thể tạo đơn đặt sân tại quầy'
+    );
+  }
+  return response.data.data;
+}
+
+export async function checkInBooking(
+  bookingId: number
+): Promise<BookingResponse> {
+  const response = await api.post<ApiResponse<BookingResponse>>(
+    `/bookings/${bookingId}/check-in`
+  );
+  if (!response.data.success || !response.data.data) {
+    throw new Error(response.data.message || 'Không thể check-in đơn đặt sân');
+  }
+  return response.data.data;
+}
+
+export async function fetchAdminUserById(userId: number): Promise<User> {
+  const response = await api.get<ApiResponse<RawUser>>(
+    `/admin/users/${userId}`
+  );
+  if (!response.data.success || !response.data.data) {
+    throw new Error(
+      response.data.message || 'Không tìm thấy thông tin người dùng'
+    );
+  }
+  return normalizeUser(response.data.data);
+}
+
+export function formatBookingCustomerSummary(booking: BookingResponse): {
+  typeLabel: string;
+  primaryText: string;
+  secondaryText: string | null;
+} {
+  if (booking.userId != null) {
+    return {
+      typeLabel: `Thành viên #${booking.userId}`,
+      primaryText: booking.userFullName || `Thành viên #${booking.userId}`,
+      secondaryText: booking.userEmail || null,
+    };
+  }
+  return {
+    typeLabel: 'Khách vãng lai',
+    primaryText: booking.guestName || 'Khách vãng lai',
+    secondaryText: booking.guestPhone ? `SĐT: ${booking.guestPhone}` : null,
+  };
+}
+
 

@@ -11,6 +11,8 @@ import { NotFoundPage } from '@/pages/errors/NotFoundPage';
 import { DashboardPage } from '@/pages/dashboard/DashboardPage';
 import { CustomerBookingPage } from '@/pages/booking/CustomerBookingPage';
 import { MyBookingsPage } from '@/pages/booking/MyBookingsPage';
+import { PosBookingPage } from '@/pages/booking/PosBookingPage';
+import { CheckInPage } from '@/pages/booking/CheckInPage';
 
 export function AppRouter() {
   return (
@@ -80,28 +82,8 @@ export function AppRouter() {
 
           {/* STAFF & ADMIN Shared Operational Routes */}
           <Route element={<RoleRoute allowed={['STAFF', 'ADMIN']} />}>
-            <Route
-              path="pos"
-              element={
-                <FeaturePlaceholder
-                  title="Đặt sân tại quầy & Bán hàng (POS)"
-                  description="Tạo lịch đặt sân trực tiếp cho khách vãng lai, bán phụ kiện/nước uống và tính tổng hóa đơn tại quầy."
-                  moduleTag="Module 5 · POS & Inventory (STAFF / ADMIN)"
-                  endpointHint="POST /api/v1/pos/orders"
-                />
-              }
-            />
-            <Route
-              path="check-in"
-              element={
-                <FeaturePlaceholder
-                  title="Check-in Khách đến sân"
-                  description="Xác nhận khách nhận sân theo mã đặt sân hoặc số điện thoại, chuyển trạng thái CONFIRMED sang CHECKED_IN."
-                  moduleTag="Module 4 · Check-in (STAFF / ADMIN)"
-                  endpointHint="PATCH /api/v1/bookings/{id}/check-in"
-                />
-              }
-            />
+            <Route path="pos" element={<PosBookingPage />} />
+            <Route path="check-in" element={<CheckInPage />} />
             <Route
               path="payments"
               element={

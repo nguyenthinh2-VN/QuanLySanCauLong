@@ -62,6 +62,19 @@ FE/
     │   │   ├── RegisterForm.tsx        # Form đăng ký tài khoản
     │   │   ├── ForgotPasswordForm.tsx  # Form gửi email khôi phục mật khẩu
     │   │   └── ResetPasswordForm.tsx   # Form đặt lại mật khẩu mới
+    │   ├── booking/                    # Các component con của phân hệ Đặt sân (Online, POS & Check-in)
+    │   │   ├── BookingDateToolbar.tsx       # Thanh chọn ngày [hôm nay, +30 ngày] & lọc cụm sân
+    │   │   ├── CourtAvailabilityGrid.tsx    # Lưới hiển thị sân và các khung giờ (FREE/BOOKED/PASSED/UNAVAILABLE)
+    │   │   ├── BookingConfirmPanel.tsx      # Panel xác nhận đặt sân online cho CUSTOMER
+    │   │   ├── BookingSuccessCard.tsx       # Biên nhận đặt sân online thành công (PENDING)
+    │   │   ├── MyBookingsFilterBar.tsx      # Bộ lọc trạng thái, khoảng ngày & sắp xếp lịch đặt
+    │   │   ├── MyBookingsTable.tsx          # Bảng lịch sử đặt sân của CUSTOMER
+    │   │   ├── CancelBookingDialog.tsx      # Hộp thoại xác nhận hủy lịch đặt sân
+    │   │   ├── RescheduleBookingDialog.tsx  # Hộp thoại đổi lịch đặt sân
+    │   │   ├── PosBookingConfirmPanel.tsx   # Panel đặt sân tại quầy (POS) với quy tắc XOR khách hàng
+    │   │   ├── PosBookingSuccessCard.tsx    # Biên nhận đặt sân tại quầy thành công (CONFIRMED)
+    │   │   ├── CheckInFormCard.tsx          # Form nhập mã đơn check-in & 4 điều kiện hợp lệ
+    │   │   └── CheckInResultCard.tsx        # Thẻ kết quả xác nhận khách đã nhận sân (CHECKED_IN)
     │   └── dashboard/                  # Các component con của trang Tổng quan
     │       ├── DashboardWelcomeBanner.tsx    # Banner chào mừng người dùng theo vai trò
     │       ├── DashboardStatCard.tsx         # Thẻ KPI đơn lẻ (số monospace + tonal badge)
@@ -81,6 +94,11 @@ FE/
     │   │   ├── RegisterPage.tsx        # /register (ghép AuthCardLayout + RegisterForm)
     │   │   ├── ForgotPasswordPage.tsx  # /forgot-password (ghép AuthCardLayout + ForgotPasswordForm)
     │   │   └── ResetPasswordPage.tsx   # /reset-password (ghép AuthCardLayout + ResetPasswordForm)
+    │   ├── booking/
+    │   │   ├── CustomerBookingPage.tsx # /booking (Đặt sân trực tuyến cho CUSTOMER)
+    │   │   ├── MyBookingsPage.tsx      # /my-bookings (Lịch đặt của tôi cho CUSTOMER)
+    │   │   ├── PosBookingPage.tsx      # /pos (Đặt sân tại quầy cho STAFF / ADMIN)
+    │   │   └── CheckInPage.tsx         # /check-in (Check-in khách vào sân cho STAFF / ADMIN)
     │   ├── dashboard/
     │   │   └── DashboardPage.tsx       # / (ghép Banner + StatsGrid + ChartPlaceholder)
     │   └── errors/
@@ -120,8 +138,8 @@ Hệ thống Frontend bao gồm tổng cộng **16 đường dẫn (Routes)**, c
 | 9 | `/payments` | Thanh toán & Hoàn tiền | ✅ | ✅ | ❌ | Placeholder + Badge `"Phase sau"` |
 | 10 | `/vouchers` | Khuyến mãi / Ưu đãi | ✅ *(Quản lý)* | ❌ | ✅ *(Xem mã)* | Placeholder + Badge `"Phase sau"` |
 | 11 | `/reports` | Báo cáo thống kê | ✅ | ❌ | ❌ | Placeholder + Badge `"Phase sau"` |
-| 12 | `/pos` | Đặt sân tại quầy (POS) | ❌ *(hoặc ✅)* | ✅ | ❌ | Placeholder + Badge `"Phase sau"` |
-| 13 | `/check-in` | Check-in khách đến sân | ❌ *(hoặc ✅)* | ✅ | ❌ | Placeholder + Badge `"Phase sau"` |
+| 12 | `/pos` | Đặt sân tại quầy (POS) | ✅ | ✅ | ❌ | **Hoàn thiện 100% (Nối API thật)** |
+| 13 | `/check-in` | Check-in khách đến sân | ✅ | ✅ | ❌ | **Hoàn thiện 100% (Nối API thật)** |
 | 14 | `/booking` | Đặt sân trực tuyến | ❌ | ❌ | ✅ | **Hoàn thiện 100% (Nối API thật)** |
 | 15 | `/my-bookings` | Lịch đặt của tôi | ❌ | ❌ | ✅ | **Hoàn thiện 100% (Nối API thật)** |
 
@@ -137,3 +155,5 @@ Hệ thống Frontend bao gồm tổng cộng **16 đường dẫn (Routes)**, c
 
 1. 🎨 **Hệ thống Thiết kế UI/UX & Bảng màu Zinc (Design System):** [`docs/frontend/design-system.md`](design-system.md)
 2. 🔐 **Đặc tả Chi tiết Phase 1 (Auth + App Shell + Wireframes):** [`docs/frontend/phase-1-auth-appshell.md`](phase-1-auth-appshell.md)
+3. 🏸 **Đặc tả Chi tiết Phase 2 (Customer Booking + My Bookings):** [`docs/frontend/phase-2-customer-booking.md`](phase-2-customer-booking.md)
+4. 🏪 **Đặc tả Chi tiết Phase 3 (POS Booking + Check-in):** [`docs/frontend/phase-3-pos-checkin.md`](phase-3-pos-checkin.md)

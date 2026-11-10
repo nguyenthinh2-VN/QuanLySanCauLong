@@ -43,6 +43,18 @@ export interface CreateBookingRequest {
   note?: string;
 }
 
+export interface CreatePosBookingRequest {
+  courtId: number;
+  bookingDate: string;
+  timeSlotId: number;
+  userId?: number;
+  guestName?: string;
+  guestPhone?: string;
+  note?: string;
+}
+
+export type PosCustomerMode = 'MEMBER' | 'GUEST';
+
 export interface UpdateBookingRequest {
   courtId?: number;
   bookingDate?: string;
