@@ -13,6 +13,7 @@ import { CustomerBookingPage } from '@/pages/booking/CustomerBookingPage';
 import { MyBookingsPage } from '@/pages/booking/MyBookingsPage';
 import { PosBookingPage } from '@/pages/booking/PosBookingPage';
 import { CheckInPage } from '@/pages/booking/CheckInPage';
+import { VouchersPage } from '@/pages/voucher/VouchersPage';
 
 export function AppRouter() {
   return (
@@ -99,17 +100,7 @@ export function AppRouter() {
 
           {/* Vouchers Route (ADMIN manages, CUSTOMER views available vouchers) */}
           <Route element={<RoleRoute allowed={['ADMIN', 'CUSTOMER']} />}>
-            <Route
-              path="vouchers"
-              element={
-                <FeaturePlaceholder
-                  title="Chương trình Ưu đãi & Mã giảm giá (Voucher)"
-                  description="Danh sách mã giảm giá theo phần trăm hoặc số tiền cố định, kiểm tra điều kiện đơn tối thiểu và áp dụng vào booking."
-                  moduleTag="Module 7 · Vouchers (ADMIN / CUSTOMER)"
-                  endpointHint="GET /api/v1/vouchers"
-                />
-              }
-            />
+            <Route path="vouchers" element={<VouchersPage />} />
           </Route>
 
           {/* CUSTOMER Routes */}

@@ -75,6 +75,17 @@ FE/
     │   │   ├── PosBookingSuccessCard.tsx    # Biên nhận đặt sân tại quầy thành công (CONFIRMED)
     │   │   ├── CheckInFormCard.tsx          # Form nhập mã đơn check-in & 4 điều kiện hợp lệ
     │   │   └── CheckInResultCard.tsx        # Thẻ kết quả xác nhận khách đã nhận sân (CHECKED_IN)
+    │   ├── voucher/                    # Các component con của phân hệ Khuyến mãi / Voucher
+    │   │   ├── AdminVouchersView.tsx        # View tổng hợp quản lý voucher dành cho ADMIN
+    │   │   ├── AdminVoucherFilterBar.tsx    # Thanh tìm kiếm, lọc trạng thái, sắp xếp và nút tạo mới
+    │   │   ├── AdminVoucherTable.tsx        # Bảng danh sách voucher, bật/tắt nhanh, sửa, xóa
+    │   │   ├── VoucherFormDialog.tsx        # Modal tạo mới và cập nhật thông tin voucher
+    │   │   ├── DeleteVoucherDialog.tsx      # Modal xác nhận xóa voucher (hard delete vs soft deactivate)
+    │   │   ├── CustomerVouchersView.tsx     # View voucher khả dụng & form áp mã cho CUSTOMER
+    │   │   ├── ActiveVoucherCard.tsx        # Thẻ voucher hoạt động (sao chép mã + áp dụng ngay)
+    │   │   ├── ApplyVoucherForm.tsx         # Form nhập mã đơn & voucher kèm chọn nhanh đơn PENDING
+    │   │   ├── ConfirmApplyVoucherDialog.tsx # Modal cảnh báo hành động 1 chiều trước khi áp mã
+    │   │   └── ApplyVoucherResultCard.tsx   # Thẻ biên nhận số tiền giảm và tổng thanh toán sau áp mã
     │   └── dashboard/                  # Các component con của trang Tổng quan
     │       ├── DashboardWelcomeBanner.tsx    # Banner chào mừng người dùng theo vai trò
     │       ├── DashboardStatCard.tsx         # Thẻ KPI đơn lẻ (số monospace + tonal badge)
@@ -87,7 +98,9 @@ FE/
     ├── lib/
     │   ├── utils.ts                    # Hàm cn() (clsx + tailwind-merge) của shadcn
     │   ├── api.ts                      # Axios instance + Request/Response Interceptors
-    │   └── auth.ts                     # Các hàm lưu/xóa localStorage và chuẩn hóa Role
+    │   ├── auth.ts                     # Các hàm lưu/xóa localStorage và chuẩn hóa Role
+    │   ├── booking.ts                  # Các hàm gọi API và tiện ích đặt sân / check-in
+    │   └── voucher.ts                  # Các hàm gọi API và tiện ích định dạng voucher
     ├── pages/                          # Các trang Page mỏng (chỉ ghép nối các component con)
     │   ├── auth/
     │   │   ├── LoginPage.tsx           # /login (ghép AuthCardLayout + LoginForm)
@@ -99,6 +112,8 @@ FE/
     │   │   ├── MyBookingsPage.tsx      # /my-bookings (Lịch đặt của tôi cho CUSTOMER)
     │   │   ├── PosBookingPage.tsx      # /pos (Đặt sân tại quầy cho STAFF / ADMIN)
     │   │   └── CheckInPage.tsx         # /check-in (Check-in khách vào sân cho STAFF / ADMIN)
+    │   ├── voucher/
+    │   │   └── VouchersPage.tsx        # /vouchers (Ghép AdminVouchersView hoặc CustomerVouchersView)
     │   ├── dashboard/
     │   │   └── DashboardPage.tsx       # / (ghép Banner + StatsGrid + ChartPlaceholder)
     │   └── errors/
@@ -108,7 +123,9 @@ FE/
     │   ├── index.tsx                   # Khai báo toàn bộ bảng định tuyến (Route Table)
     │   └── guards.tsx                  # ProtectedRoute (yêu cầu đăng nhập) & RoleRoute (kiểm tra quyền)
     ├── types/
-    │   └── auth.ts                     # TypeScript interfaces khớp 100% với Backend DTO
+    │   ├── auth.ts                     # TypeScript interfaces khớp 100% với Backend DTO Auth/User
+    │   ├── booking.ts                  # TypeScript interfaces khớp 100% với Backend DTO Booking
+    │   └── voucher.ts                  # TypeScript interfaces khớp 100% với Backend DTO Voucher
     ├── App.tsx
     ├── main.tsx
     └── index.css                       # Khai báo CSS Variables tông màu chuẩn shadcn/ui Zinc + Slate
@@ -129,14 +146,14 @@ Hệ thống Frontend bao gồm tổng cộng **16 đường dẫn (Routes)**, c
 | 4 | `/reset-password` | Đặt lại mật khẩu mới (`?token=...`) | **Hoàn thiện 100% (Nối API thật)** |
 
 ### 3.2. Nhóm Ứng dụng Nội bộ theo Vai trò (Protected App Shell Routes — 10 trang)
-| STT | Đường dẫn | Tên hiển thị trên Sidebar | `ADMIN` | `STAFF` | `CUSTOMER` | Trạng thái Phase 1 |
+| STT | Đường dẫn | Tên hiển thị trên Sidebar | `ADMIN` | `STAFF` | `CUSTOMER` | Trạng thái |
 |:---:|---|---|:---:|:---:|:---:|---|
 | 5 | `/` | Tổng quan (Dashboard) | ✅ | ✅ | *(Redirect `/booking` hoặc xem tổng quan)* | **AppShell + 4 Stat Cards + Panel chờ** |
 | 6 | `/bookings` | Quản lý đặt sân | ✅ | ❌ | ❌ | Placeholder + Badge `"Phase sau"` |
 | 7 | `/courts` | Quản lý sân & Khung giờ | ✅ | ❌ | ❌ | Placeholder + Badge `"Phase sau"` |
 | 8 | `/users` | Quản lý người dùng | ✅ | ❌ | ❌ | Placeholder + Badge `"Phase sau"` |
 | 9 | `/payments` | Thanh toán & Hoàn tiền | ✅ | ✅ | ❌ | Placeholder + Badge `"Phase sau"` |
-| 10 | `/vouchers` | Khuyến mãi / Ưu đãi | ✅ *(Quản lý)* | ❌ | ✅ *(Xem mã)* | Placeholder + Badge `"Phase sau"` |
+| 10 | `/vouchers` | Khuyến mãi / Ưu đãi | ✅ *(Quản lý)* | ❌ | ✅ *(Xem mã & áp mã)* | **Hoàn thiện 100% (Nối API thật)** |
 | 11 | `/reports` | Báo cáo thống kê | ✅ | ❌ | ❌ | Placeholder + Badge `"Phase sau"` |
 | 12 | `/pos` | Đặt sân tại quầy (POS) | ✅ | ✅ | ❌ | **Hoàn thiện 100% (Nối API thật)** |
 | 13 | `/check-in` | Check-in khách đến sân | ✅ | ✅ | ❌ | **Hoàn thiện 100% (Nối API thật)** |
@@ -157,3 +174,4 @@ Hệ thống Frontend bao gồm tổng cộng **16 đường dẫn (Routes)**, c
 2. 🔐 **Đặc tả Chi tiết Phase 1 (Auth + App Shell + Wireframes):** [`docs/frontend/phase-1-auth-appshell.md`](phase-1-auth-appshell.md)
 3. 🏸 **Đặc tả Chi tiết Phase 2 (Customer Booking + My Bookings):** [`docs/frontend/phase-2-customer-booking.md`](phase-2-customer-booking.md)
 4. 🏪 **Đặc tả Chi tiết Phase 3 (POS Booking + Check-in):** [`docs/frontend/phase-3-pos-checkin.md`](phase-3-pos-checkin.md)
+5. 🎟️ **Đặc tả Chi tiết Phase 4 (Voucher Management + Apply Voucher):** [`docs/frontend/phase-4-vouchers.md`](phase-4-vouchers.md)
