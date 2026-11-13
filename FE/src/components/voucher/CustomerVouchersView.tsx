@@ -78,7 +78,7 @@ export function CustomerVouchersView() {
               Khám phá các voucher đang hoạt động và áp dụng vào đơn đặt sân chờ thanh toán (PENDING) của bạn.
             </p>
           </div>
-          <Badge variant="indigo">Ưu đãi thành viên</Badge>
+          <Badge variant="zinc">Ưu đãi thành viên</Badge>
         </div>
       </div>
 

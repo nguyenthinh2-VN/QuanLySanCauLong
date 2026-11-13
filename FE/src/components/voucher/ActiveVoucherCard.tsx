@@ -62,7 +62,7 @@ export function ActiveVoucherCard({
                 {copied ? 'Đã chép ✓' : 'Sao chép'}
               </button>
             </div>
-            <Badge variant="indigo" className="font-semibold">
+            <Badge variant="zinc" className="font-semibold">
               {voucher.discountType === 'PERCENTAGE'
                 ? 'Giảm theo %'
                 : 'Giảm tiền mặt'}
@@ -82,11 +82,11 @@ export function ActiveVoucherCard({
 
         <CardContent className="space-y-2.5 pb-3 text-xs">
           {/* Discount highlight */}
-          <div className="rounded-lg border border-indigo-100 bg-indigo-50/70 p-2.5">
-            <span className="text-[11px] font-medium text-indigo-900">
+          <div className="rounded-lg border border-zinc-200 bg-zinc-100/70 p-2.5">
+            <span className="text-[11px] font-medium text-zinc-900">
               Mức giảm ưu đãi:
             </span>
-            <p className="font-sans text-sm font-bold text-indigo-700">
+            <p className="font-sans text-sm font-bold text-zinc-800">
               {discountText}
             </p>
           </div>

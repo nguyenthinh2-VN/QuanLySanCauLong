@@ -170,7 +170,7 @@ export function AdminVoucherTable({
                     {/* Discount value & max discount */}
                     <td className="px-3 py-3.5 align-top">
                       <div className="space-y-1">
-                        <span className="inline-flex rounded-md border border-indigo-200 bg-indigo-50 px-2 py-0.5 font-sans font-bold text-indigo-700">
+                        <span className="inline-flex rounded-md border border-zinc-200 bg-zinc-100 px-2 py-0.5 font-sans font-bold text-zinc-800">
                           {formatVoucherDiscount(
                             voucher.discountType,
                             voucher.discountValue,

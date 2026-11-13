@@ -44,6 +44,15 @@ export const api = axios.create({
 
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
+    // Chống nhân đôi tiền tố '/api/v1' nếu caller truyền URL có sẵn tiền tố này
+    if (config.url) {
+      if (config.url.startsWith('/api/v1/')) {
+        config.url = config.url.replace(/^\/api\/v1/, '');
+      } else if (config.url.startsWith('api/v1/')) {
+        config.url = config.url.replace(/^api\/v1/, '');
+      }
+    }
+
     const token = getAccessToken();
     if (token && !isPublicAuthEndpoint(config.url)) {
       config.headers.Authorization = `Bearer ${token}`;

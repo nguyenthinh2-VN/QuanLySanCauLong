@@ -86,6 +86,12 @@ FE/
     │   │   ├── ApplyVoucherForm.tsx         # Form nhập mã đơn & voucher kèm chọn nhanh đơn PENDING
     │   │   ├── ConfirmApplyVoucherDialog.tsx # Modal cảnh báo hành động 1 chiều trước khi áp mã
     │   │   └── ApplyVoucherResultCard.tsx   # Thẻ biên nhận số tiền giảm và tổng thanh toán sau áp mã
+    │   ├── payment/                    # Các component con của phân hệ Thanh toán & Hoàn tiền
+    │   │   ├── PaymentResultCard.tsx        # Thẻ biên nhận chi tiết kết quả giao dịch (Thành công / Hoàn tiền)
+    │   │   ├── PaymentDialog.tsx            # Modal thanh toán cho CUSTOMER tại /my-bookings (FULL/DEPOSIT)
+    │   │   ├── PaymentCollectCard.tsx       # Card công cụ thu tiền đơn PENDING tại quầy cho STAFF/ADMIN
+    │   │   ├── PaymentRefundCard.tsx        # Card công cụ hoàn tiền giao dịch cho STAFF/ADMIN
+    │   │   └── ConfirmRefundDialog.tsx      # Modal cảnh báo thao tác hoàn tiền một chiều
     │   └── dashboard/                  # Các component con của trang Tổng quan
     │       ├── DashboardWelcomeBanner.tsx    # Banner chào mừng người dùng theo vai trò
     │       ├── DashboardStatCard.tsx         # Thẻ KPI đơn lẻ (số monospace + tonal badge)
@@ -100,7 +106,8 @@ FE/
     │   ├── api.ts                      # Axios instance + Request/Response Interceptors
     │   ├── auth.ts                     # Các hàm lưu/xóa localStorage và chuẩn hóa Role
     │   ├── booking.ts                  # Các hàm gọi API và tiện ích đặt sân / check-in
-    │   └── voucher.ts                  # Các hàm gọi API và tiện ích định dạng voucher
+    │   ├── voucher.ts                  # Các hàm gọi API và tiện ích định dạng voucher
+    │   └── payment.ts                  # Các hàm gọi API thanh toán và hoàn tiền
     ├── pages/                          # Các trang Page mỏng (chỉ ghép nối các component con)
     │   ├── auth/
     │   │   ├── LoginPage.tsx           # /login (ghép AuthCardLayout + LoginForm)
@@ -114,6 +121,8 @@ FE/
     │   │   └── CheckInPage.tsx         # /check-in (Check-in khách vào sân cho STAFF / ADMIN)
     │   ├── voucher/
     │   │   └── VouchersPage.tsx        # /vouchers (Ghép AdminVouchersView hoặc CustomerVouchersView)
+    │   ├── payment/
+    │   │   └── PaymentsPage.tsx        # /payments (Ghép PaymentCollectCard + PaymentRefundCard)
     │   ├── dashboard/
     │   │   └── DashboardPage.tsx       # / (ghép Banner + StatsGrid + ChartPlaceholder)
     │   └── errors/
@@ -125,7 +134,8 @@ FE/
     ├── types/
     │   ├── auth.ts                     # TypeScript interfaces khớp 100% với Backend DTO Auth/User
     │   ├── booking.ts                  # TypeScript interfaces khớp 100% với Backend DTO Booking
-    │   └── voucher.ts                  # TypeScript interfaces khớp 100% với Backend DTO Voucher
+    │   ├── voucher.ts                  # TypeScript interfaces khớp 100% với Backend DTO Voucher
+    │   └── payment.ts                  # TypeScript interfaces khớp 100% với Backend DTO Payment
     ├── App.tsx
     ├── main.tsx
     └── index.css                       # Khai báo CSS Variables tông màu chuẩn shadcn/ui Zinc + Slate
@@ -152,7 +162,7 @@ Hệ thống Frontend bao gồm tổng cộng **16 đường dẫn (Routes)**, c
 | 6 | `/bookings` | Quản lý đặt sân | ✅ | ❌ | ❌ | Placeholder + Badge `"Phase sau"` |
 | 7 | `/courts` | Quản lý sân & Khung giờ | ✅ | ❌ | ❌ | Placeholder + Badge `"Phase sau"` |
 | 8 | `/users` | Quản lý người dùng | ✅ | ❌ | ❌ | Placeholder + Badge `"Phase sau"` |
-| 9 | `/payments` | Thanh toán & Hoàn tiền | ✅ | ✅ | ❌ | Placeholder + Badge `"Phase sau"` |
+| 9 | `/payments` | Thanh toán & Hoàn tiền | ✅ | ✅ | ❌ | **Hoàn thiện 100% (Nối API thật)** |
 | 10 | `/vouchers` | Khuyến mãi / Ưu đãi | ✅ *(Quản lý)* | ❌ | ✅ *(Xem mã & áp mã)* | **Hoàn thiện 100% (Nối API thật)** |
 | 11 | `/reports` | Báo cáo thống kê | ✅ | ❌ | ❌ | Placeholder + Badge `"Phase sau"` |
 | 12 | `/pos` | Đặt sân tại quầy (POS) | ✅ | ✅ | ❌ | **Hoàn thiện 100% (Nối API thật)** |
@@ -175,3 +185,4 @@ Hệ thống Frontend bao gồm tổng cộng **16 đường dẫn (Routes)**, c
 3. 🏸 **Đặc tả Chi tiết Phase 2 (Customer Booking + My Bookings):** [`docs/frontend/phase-2-customer-booking.md`](phase-2-customer-booking.md)
 4. 🏪 **Đặc tả Chi tiết Phase 3 (POS Booking + Check-in):** [`docs/frontend/phase-3-pos-checkin.md`](phase-3-pos-checkin.md)
 5. 🎟️ **Đặc tả Chi tiết Phase 4 (Voucher Management + Apply Voucher):** [`docs/frontend/phase-4-vouchers.md`](phase-4-vouchers.md)
+6. 💳 **Đặc tả Chi tiết Phase 5 (Thanh toán + Hoàn tiền):** [`docs/frontend/phase-5-payments.md`](phase-5-payments.md)

@@ -27,7 +27,7 @@ export function ApplyVoucherResultCard({
     <Card className="border-t-4 border-t-zinc-900 bg-white shadow-sm">
       <CardHeader className="space-y-1.5 pb-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <Badge variant="indigo" className="font-semibold">
+          <Badge variant="zinc" className="font-semibold">
             Áp mã thành công
           </Badge>
           <span className="rounded-md border border-zinc-200 bg-zinc-100 px-2.5 py-0.5 font-mono text-xs font-bold text-zinc-900">

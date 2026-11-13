@@ -14,6 +14,7 @@ import { MyBookingsPage } from '@/pages/booking/MyBookingsPage';
 import { PosBookingPage } from '@/pages/booking/PosBookingPage';
 import { CheckInPage } from '@/pages/booking/CheckInPage';
 import { VouchersPage } from '@/pages/voucher/VouchersPage';
+import { PaymentsPage } from '@/pages/payment/PaymentsPage';
 
 export function AppRouter() {
   return (
@@ -85,17 +86,7 @@ export function AppRouter() {
           <Route element={<RoleRoute allowed={['STAFF', 'ADMIN']} />}>
             <Route path="pos" element={<PosBookingPage />} />
             <Route path="check-in" element={<CheckInPage />} />
-            <Route
-              path="payments"
-              element={
-                <FeaturePlaceholder
-                  title="Quản lý Giao dịch Thanh toán"
-                  description="Theo dõi lịch sử thanh toán tiền mặt / chuyển khoản, xác nhận thanh toán và xử lý hoàn tiền."
-                  moduleTag="Module 6 · Payments (ADMIN / STAFF)"
-                  endpointHint="POST /api/v1/payments"
-                />
-              }
-            />
+            <Route path="payments" element={<PaymentsPage />} />
           </Route>
 
           {/* Vouchers Route (ADMIN manages, CUSTOMER views available vouchers) */}

@@ -27,6 +27,7 @@ export interface MyBookingsTableProps {
   onPageChange: (newPage: number) => void;
   onOpenCancel: (booking: BookingResponse) => void;
   onOpenReschedule: (booking: BookingResponse) => void;
+  onOpenPayment?: (booking: BookingResponse) => void;
 }
 
 export function MyBookingsTable({
@@ -37,6 +38,7 @@ export function MyBookingsTable({
   onPageChange,
   onOpenCancel,
   onOpenReschedule,
+  onOpenPayment,
 }: MyBookingsTableProps) {
   if (loading) {
     return (
@@ -199,7 +201,36 @@ export function MyBookingsTable({
                     </td>
 
                     <td className="whitespace-nowrap px-4 py-3.5 text-right">
-                      {actionable ? (
+                      {booking.status === 'PENDING' ? (
+                        <div className="inline-flex items-center justify-end gap-2">
+                          {onOpenPayment && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              className="bg-zinc-900 text-white hover:bg-zinc-800"
+                              onClick={() => onOpenPayment(booking)}
+                            >
+                              Thanh toán
+                            </Button>
+                          )}
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => onOpenReschedule(booking)}
+                          >
+                            Đổi lịch
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => onOpenCancel(booking)}
+                          >
+                            Hủy
+                          </Button>
+                        </div>
+                      ) : actionable ? (
                         <div className="inline-flex items-center justify-end gap-2">
                           <Button
                             type="button"
@@ -280,7 +311,40 @@ export function MyBookingsTable({
                   </span>
                 </div>
 
-                {actionable && (
+                {booking.status === 'PENDING' ? (
+                  <div className="space-y-2 pt-1">
+                    {onOpenPayment && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="w-full bg-zinc-900 text-white hover:bg-zinc-800"
+                        onClick={() => onOpenPayment(booking)}
+                      >
+                        Thanh toán
+                      </Button>
+                    )}
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        onClick={() => onOpenReschedule(booking)}
+                      >
+                        Đổi lịch
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        className="w-full"
+                        onClick={() => onOpenCancel(booking)}
+                      >
+                        Hủy đơn
+                      </Button>
+                    </div>
+                  </div>
+                ) : actionable ? (
                   <div className="grid grid-cols-2 gap-2 pt-1">
                     <Button
                       type="button"
@@ -301,7 +365,7 @@ export function MyBookingsTable({
                       Hủy đơn
                     </Button>
                   </div>
-                )}
+                ) : null}
               </div>
             );
           })}
