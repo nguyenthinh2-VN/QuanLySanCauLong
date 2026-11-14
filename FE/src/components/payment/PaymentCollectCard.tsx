@@ -153,7 +153,7 @@ export function PaymentCollectCard() {
                     onClick={() => setPaymentType(type)}
                     className={`rounded-lg border px-3 py-2 text-center text-xs font-medium transition-colors ${
                       selected
-                        ? 'border-zinc-900 bg-zinc-900 text-white'
+                        ? 'border-emerald-600 bg-emerald-600 text-white'
                         : 'border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50'
                     }`}
                   >
@@ -186,7 +186,7 @@ export function PaymentCollectCard() {
                       onClick={() => setPaymentMethod(method)}
                       className={`rounded-lg border px-2.5 py-2 text-center text-xs font-medium transition-colors ${
                         selected
-                          ? 'border-zinc-900 bg-zinc-900 text-white'
+                          ? 'border-emerald-600 bg-emerald-600 text-white'
                           : 'border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50'
                       }`}
                     >

@@ -6,7 +6,9 @@ import com.badminton.modules.booking.entity.Booking;
 import com.badminton.modules.booking.entity.BookingStatus;
 import com.badminton.modules.booking.repository.BookingRepository;
 import com.badminton.modules.payment.dto.request.CreatePaymentRequest;
+import com.badminton.modules.payment.dto.request.PaymentFilterRequest;
 import com.badminton.modules.payment.dto.request.RefundPaymentRequest;
+import com.badminton.modules.payment.dto.response.PaymentDetailResponse;
 import com.badminton.modules.payment.dto.response.PaymentResponse;
 import com.badminton.modules.payment.entity.Payment;
 import com.badminton.modules.payment.entity.PaymentMethod;
@@ -21,6 +23,7 @@ import com.badminton.security.userdetails.CustomUserDetails;
 import com.badminton.shared.constant.RoleType;
 import com.badminton.shared.exception.AppException;
 import com.badminton.shared.exception.ErrorCode;
+import com.badminton.shared.response.PageResponse;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -29,11 +32,17 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -421,5 +430,216 @@ class PaymentServiceTest {
                                 .isInstanceOf(AppException.class)
                                 .satisfies(ex -> assertThat(((AppException) ex).getErrorCode())
                                                 .isEqualTo(ErrorCode.REFUND_NOT_ALLOWED));
+        }
+
+        // ==================== LỊCH SỬ GIAO DỊCH & HÓA ĐƠN ====================
+
+        @Test
+        @DisplayName("getPayments khi fromDate > toDate -> ném 400 BAD_REQUEST")
+        void getPayments_invalidDateRange_throwsBadRequest() {
+                PaymentFilterRequest filter = PaymentFilterRequest.builder()
+                                .fromDate(LocalDate.of(2026, 11, 20))
+                                .toDate(LocalDate.of(2026, 11, 10))
+                                .build();
+
+                assertThatThrownBy(() -> paymentService.getPayments(filter, 0, 10, "createdAt,desc"))
+                                .isInstanceOf(AppException.class)
+                                .satisfies(ex -> assertThat(((AppException) ex).getErrorCode())
+                                                .isEqualTo(ErrorCode.BAD_REQUEST));
+        }
+
+        @Test
+        @DisplayName("getPayments hợp lệ -> trả về PageResponse<PaymentResponse>")
+        @SuppressWarnings("unchecked")
+        void getPayments_validFilter_returnsPageResponse() {
+                Payment payment = Payment.builder()
+                                .booking(booking)
+                                .amount(new BigDecimal("400000.00"))
+                                .paymentType(PaymentType.FULL)
+                                .paymentMethod(PaymentMethod.CASH)
+                                .status(PaymentStatus.SUCCESS)
+                                .build();
+                payment.setId(70L);
+
+                PaymentResponse mapped = PaymentResponse.builder()
+                                .id(70L)
+                                .bookingId(booking.getId())
+                                .amount(new BigDecimal("400000.00"))
+                                .status(PaymentStatus.SUCCESS)
+                                .build();
+
+                Page<Payment> page = new PageImpl<>(List.of(payment));
+                when(paymentRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
+                when(paymentMapper.toResponse(payment)).thenReturn(mapped);
+
+                PaymentFilterRequest filter = PaymentFilterRequest.builder()
+                                .status(PaymentStatus.SUCCESS)
+                                .fromDate(LocalDate.of(2026, 11, 1))
+                                .toDate(LocalDate.of(2026, 11, 30))
+                                .build();
+
+                PageResponse<PaymentResponse> result = paymentService.getPayments(filter, 0, 10, "createdAt,desc");
+
+                assertThat(result.getItems()).hasSize(1);
+                assertThat(result.getItems().get(0).getId()).isEqualTo(70L);
+                assertThat(result.getTotalElements()).isEqualTo(1);
+        }
+
+        @Test
+        @DisplayName("getMyPayments khi fromDate > toDate -> ném 400 BAD_REQUEST")
+        void getMyPayments_invalidDateRange_throwsBadRequest() {
+                authenticateAs(customer);
+                PaymentFilterRequest filter = PaymentFilterRequest.builder()
+                                .fromDate(LocalDate.of(2026, 11, 20))
+                                .toDate(LocalDate.of(2026, 11, 10))
+                                .build();
+
+                assertThatThrownBy(() -> paymentService.getMyPayments(filter, 0, 10, "createdAt,desc"))
+                                .isInstanceOf(AppException.class)
+                                .satisfies(ex -> assertThat(((AppException) ex).getErrorCode())
+                                                .isEqualTo(ErrorCode.BAD_REQUEST));
+        }
+
+        @Test
+        @DisplayName("getMyPayments cho CUSTOMER -> trả về danh sách giao dịch của chính mình")
+        @SuppressWarnings("unchecked")
+        void getMyPayments_customer_returnsOwnPaymentsPageResponse() {
+                authenticateAs(customer);
+
+                Payment payment = Payment.builder()
+                                .booking(booking)
+                                .amount(new BigDecimal("400000.00"))
+                                .status(PaymentStatus.SUCCESS)
+                                .build();
+                payment.setId(71L);
+
+                PaymentResponse mapped = PaymentResponse.builder()
+                                .id(71L)
+                                .bookingId(booking.getId())
+                                .status(PaymentStatus.SUCCESS)
+                                .build();
+
+                Page<Payment> page = new PageImpl<>(List.of(payment));
+                when(paymentRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
+                when(paymentMapper.toResponse(payment)).thenReturn(mapped);
+
+                PageResponse<PaymentResponse> result = paymentService.getMyPayments(
+                                new PaymentFilterRequest(), 0, 10, "createdAt,desc");
+
+                assertThat(result.getItems()).hasSize(1);
+                assertThat(result.getItems().get(0).getId()).isEqualTo(71L);
+        }
+
+        @Test
+        @DisplayName("getPaymentById không tồn tại -> ném 404 PAYMENT_NOT_FOUND")
+        void getPaymentById_notFound_throwsPaymentNotFound() {
+                authenticateAs(staff);
+                when(paymentRepository.findDetailById(999L)).thenReturn(Optional.empty());
+
+                assertThatThrownBy(() -> paymentService.getPaymentById(999L))
+                                .isInstanceOf(AppException.class)
+                                .satisfies(ex -> assertThat(((AppException) ex).getErrorCode())
+                                                .isEqualTo(ErrorCode.PAYMENT_NOT_FOUND));
+        }
+
+        @Test
+        @DisplayName("getPaymentById: CUSTOMER xem giao dịch của người khác -> ném 403 ACCESS_DENIED")
+        void getPaymentById_customerViewsOthersPayment_throwsAccessDenied() {
+                authenticateAs(otherCustomer);
+
+                Payment payment = Payment.builder()
+                                .booking(booking)
+                                .amount(new BigDecimal("400000.00"))
+                                .status(PaymentStatus.SUCCESS)
+                                .build();
+                payment.setId(72L);
+
+                when(paymentRepository.findDetailById(72L)).thenReturn(Optional.of(payment));
+
+                assertThatThrownBy(() -> paymentService.getPaymentById(72L))
+                                .isInstanceOf(AppException.class)
+                                .satisfies(ex -> assertThat(((AppException) ex).getErrorCode())
+                                                .isEqualTo(ErrorCode.ACCESS_DENIED));
+        }
+
+        @Test
+        @DisplayName("getPaymentById: CUSTOMER xem giao dịch khách vãng lai (user = null) -> ném 403 ACCESS_DENIED")
+        void getPaymentById_customerViewsGuestPayment_throwsAccessDenied() {
+                authenticateAs(customer);
+
+                Booking guestBooking = Booking.builder()
+                                .user(null)
+                                .guestName("Khách Lẻ")
+                                .guestPhone("0909998888")
+                                .status(BookingStatus.CONFIRMED)
+                                .totalAmount(new BigDecimal("400000.00"))
+                                .build();
+                guestBooking.setId(200L);
+
+                Payment payment = Payment.builder()
+                                .booking(guestBooking)
+                                .amount(new BigDecimal("400000.00"))
+                                .status(PaymentStatus.SUCCESS)
+                                .build();
+                payment.setId(73L);
+
+                when(paymentRepository.findDetailById(73L)).thenReturn(Optional.of(payment));
+
+                assertThatThrownBy(() -> paymentService.getPaymentById(73L))
+                                .isInstanceOf(AppException.class)
+                                .satisfies(ex -> assertThat(((AppException) ex).getErrorCode())
+                                                .isEqualTo(ErrorCode.ACCESS_DENIED));
+        }
+
+        @Test
+        @DisplayName("getPaymentById: CUSTOMER xem hóa đơn của chính mình -> trả về PaymentDetailResponse")
+        void getPaymentById_customerViewsOwnPayment_returnsDetailResponse() {
+                authenticateAs(customer);
+
+                Payment payment = Payment.builder()
+                                .booking(booking)
+                                .amount(new BigDecimal("400000.00"))
+                                .status(PaymentStatus.SUCCESS)
+                                .build();
+                payment.setId(74L);
+
+                PaymentDetailResponse detail = PaymentDetailResponse.builder()
+                                .id(74L)
+                                .bookingId(booking.getId())
+                                .customerName(customer.getFullName())
+                                .build();
+
+                when(paymentRepository.findDetailById(74L)).thenReturn(Optional.of(payment));
+                when(paymentMapper.toDetailResponse(payment)).thenReturn(detail);
+
+                PaymentDetailResponse result = paymentService.getPaymentById(74L);
+
+                assertThat(result.getId()).isEqualTo(74L);
+                assertThat(result.getCustomerName()).isEqualTo("Khách Hàng A");
+        }
+
+        @Test
+        @DisplayName("getPaymentById: STAFF xem bất kỳ hóa đơn nào -> trả về PaymentDetailResponse")
+        void getPaymentById_staffViewsAnyPayment_returnsDetailResponse() {
+                authenticateAs(staff);
+
+                Payment payment = Payment.builder()
+                                .booking(booking)
+                                .amount(new BigDecimal("400000.00"))
+                                .status(PaymentStatus.SUCCESS)
+                                .build();
+                payment.setId(75L);
+
+                PaymentDetailResponse detail = PaymentDetailResponse.builder()
+                                .id(75L)
+                                .bookingId(booking.getId())
+                                .build();
+
+                when(paymentRepository.findDetailById(75L)).thenReturn(Optional.of(payment));
+                when(paymentMapper.toDetailResponse(payment)).thenReturn(detail);
+
+                PaymentDetailResponse result = paymentService.getPaymentById(75L);
+
+                assertThat(result.getId()).isEqualTo(75L);
         }
 }

@@ -5,7 +5,12 @@ import com.badminton.modules.payment.entity.PaymentStatus;
 import com.badminton.modules.report.repository.projection.DailyRevenueProjection;
 import com.badminton.modules.report.repository.projection.PaymentMethodRevenueProjection;
 import jakarta.persistence.LockModeType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -17,13 +22,27 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface PaymentRepository extends JpaRepository<Payment, Long> {
+public interface PaymentRepository extends JpaRepository<Payment, Long>, JpaSpecificationExecutor<Payment> {
 
     boolean existsByBookingIdAndStatus(Long bookingId, PaymentStatus status);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT p FROM Payment p WHERE p.id = :id")
     Optional<Payment> findByIdForUpdate(@Param("id") Long id);
+
+    @Override
+    @EntityGraph(attributePaths = {"booking"})
+    Page<Payment> findAll(Specification<Payment> spec, Pageable pageable);
+
+    @EntityGraph(attributePaths = {
+            "booking",
+            "booking.user",
+            "booking.court",
+            "booking.court.complex",
+            "booking.timeSlot"
+    })
+    @Query("SELECT p FROM Payment p WHERE p.id = :id")
+    Optional<Payment> findDetailById(@Param("id") Long id);
 
     @Query("SELECT CAST(p.paidAt AS LocalDate) AS reportDate, p.status AS status, SUM(p.amount) AS totalAmount, COUNT(p) AS transactionCount " +
             "FROM Payment p " +

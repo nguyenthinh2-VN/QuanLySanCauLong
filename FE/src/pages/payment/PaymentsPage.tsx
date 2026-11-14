@@ -1,7 +1,16 @@
+import { useState } from 'react';
 import { PaymentCollectCard } from '@/components/payment/PaymentCollectCard';
-import { PaymentRefundCard } from '@/components/payment/PaymentRefundCard';
+import { PaymentHistorySection } from '@/components/payment/PaymentHistorySection';
+import {
+  PaymentRefundCard,
+  type RefundTriggerRequest,
+} from '@/components/payment/PaymentRefundCard';
 
 export function PaymentsPage() {
+  const [refundRequest, setRefundRequest] =
+    useState<RefundTriggerRequest | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
+
   return (
     <div className="space-y-6">
       {/* Page Title & Context Banner */}
@@ -15,7 +24,7 @@ export function PaymentsPage() {
               Xử lý thu tiền trực tiếp cho các đơn đặt sân trực tuyến chờ thanh toán và thực hiện hoàn tiền giao dịch theo quy định.
             </p>
           </div>
-          <span className="rounded-md border border-zinc-200 bg-zinc-100 px-2.5 py-1 text-xs font-semibold text-zinc-800">
+          <span className="rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
             Dành cho Nhân viên &amp; Quản trị viên
           </span>
         </div>
@@ -23,15 +32,30 @@ export function PaymentsPage() {
 
       {/* 2 Tools Grid */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
-        {/* Tool (a): Thu tiền đơn PENDING */}
         <div>
           <PaymentCollectCard />
         </div>
 
-        {/* Tool (b): Hoàn tiền giao dịch */}
         <div>
-          <PaymentRefundCard />
+          <PaymentRefundCard
+            refundRequest={refundRequest}
+            onRefundSuccess={() => setRefreshTrigger((n) => n + 1)}
+          />
         </div>
+      </div>
+
+      {/* System-wide Transaction History */}
+      <div className="space-y-3">
+        <h2 className="text-base font-semibold text-zinc-900">
+          Lịch sử giao dịch toàn hệ thống
+        </h2>
+        <PaymentHistorySection
+          mode="staff"
+          refreshTrigger={refreshTrigger}
+          onSelectRefund={(id) =>
+            setRefundRequest({ paymentId: id, requestKey: Date.now() })
+          }
+        />
       </div>
     </div>
   );

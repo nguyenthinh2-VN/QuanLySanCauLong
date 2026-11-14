@@ -15,6 +15,7 @@ import { PosBookingPage } from '@/pages/booking/PosBookingPage';
 import { CheckInPage } from '@/pages/booking/CheckInPage';
 import { VouchersPage } from '@/pages/voucher/VouchersPage';
 import { PaymentsPage } from '@/pages/payment/PaymentsPage';
+import { ReportsPage } from '@/pages/report/ReportsPage';
 
 export function AppRouter() {
   return (
@@ -69,17 +70,7 @@ export function AppRouter() {
                 />
               }
             />
-            <Route
-              path="reports"
-              element={
-                <FeaturePlaceholder
-                  title="Báo cáo Doanh thu & Công suất sân"
-                  description="Thống kê doanh thu gộp, hoàn tiền, doanh thu thuần (Net Revenue) và tỷ lệ lấp đầy sân theo Ngày / Tuần / Tháng."
-                  moduleTag="Module 8 · Reports (ADMIN)"
-                  endpointHint="GET /api/v1/reports/revenue & /api/v1/reports/occupancy"
-                />
-              }
-            />
+            <Route path="reports" element={<ReportsPage />} />
           </Route>
 
           {/* STAFF & ADMIN Shared Operational Routes */}

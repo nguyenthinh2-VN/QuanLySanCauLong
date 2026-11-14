@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AuthAlert } from '@/components/auth/AuthAlert';
 import { ConfirmRefundDialog } from '@/components/payment/ConfirmRefundDialog';
 import { PaymentResultCard } from '@/components/payment/PaymentResultCard';
@@ -16,13 +16,35 @@ import { extractErrorMessage } from '@/lib/auth';
 import { refundPayment } from '@/lib/payment';
 import type { PaymentResponse } from '@/types/payment';
 
-export function PaymentRefundCard() {
+export interface RefundTriggerRequest {
+  paymentId: number;
+  requestKey: number;
+}
+
+export interface PaymentRefundCardProps {
+  refundRequest?: RefundTriggerRequest | null;
+  onRefundSuccess?: () => void;
+}
+
+export function PaymentRefundCard({
+  refundRequest,
+  onRefundSuccess,
+}: PaymentRefundCardProps) {
   const [paymentId, setPaymentId] = useState<string>('');
   const [reason, setReason] = useState<string>('');
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState<boolean>(false);
   const [result, setResult] = useState<PaymentResponse | null>(null);
+
+  useEffect(() => {
+    if (refundRequest) {
+      setPaymentId(String(refundRequest.paymentId));
+      setResult(null);
+      setErrorMessage(null);
+      setDialogOpen(true);
+    }
+  }, [refundRequest]);
 
   function handleOpenConfirm(e: React.FormEvent) {
     e.preventDefault();
@@ -49,6 +71,7 @@ export function PaymentRefundCard() {
       });
       setDialogOpen(false);
       setResult(res);
+      onRefundSuccess?.();
     } catch (error) {
       setDialogOpen(false);
       setErrorMessage(

@@ -11,6 +11,9 @@
 |:---:|---|---|---|---|
 | 1 | `POST` | `/` | `Authenticated` (Chủ booking hoặc `STAFF`/`ADMIN`) | Thanh toán đơn đặt sân (FULL hoặc DEPOSIT). Status booking chuyển sang `CONFIRMED`. Trả về `201 Created`. |
 | 2 | `POST` | `/{id}/refund` | `STAFF`, `ADMIN` | Hoàn tiền giao dịch (Payment $\rightarrow$ `REFUNDED`, Booking $\rightarrow$ `CANCELLED`). Trả về `200 OK`. |
+| 3 | `GET` | `/` | `STAFF`, `ADMIN` | Lấy lịch sử giao dịch toàn hệ thống (phân trang, lọc, sắp xếp). Trả về `200 OK`. |
+| 4 | `GET` | `/my` | `Authenticated` | Lấy lịch sử giao dịch thanh toán của chính người dùng đang đăng nhập. Trả về `200 OK`. |
+| 5 | `GET` | `/{id}` | `Authenticated` (Chủ booking hoặc `STAFF`/`ADMIN`) | Lấy chi tiết hóa đơn giao dịch thanh toán (`PaymentDetailResponse`). Trả về `200 OK`. |
 
 ---
 
@@ -136,3 +139,133 @@ Dành cho Nhân viên Lễ tân (`STAFF`) hoặc Quản trị viên (`ADMIN`) th
 - **409 Conflict (`REFUND_NOT_ALLOWED`):**
   - Giao dịch chưa thanh toán thành công hoặc đã được hoàn tiền trước đó.
   - Đơn đặt sân tương ứng đã vào sân (`CHECKED_IN`) hoặc đã hoàn tất thi đấu (`COMPLETED`).
+
+---
+
+## 3. Lịch Sử Giao Dịch Toàn Hệ Thống (Get All Payments)
+
+Dành cho Nhân viên Lễ tân (`STAFF`) hoặc Quản trị viên (`ADMIN`) tra cứu, đối soát lịch sử giao dịch trên toàn hệ thống.
+
+- **Endpoint:** `GET /api/v1/payments`
+- **Quyền hạn:** `@PreAuthorize("hasAnyRole('STAFF', 'ADMIN')")`
+- **Headers:** `Authorization: Bearer <staff_or_admin_jwt_token>`
+
+### 3.1. Query Parameters (`PaymentFilterRequest` & Phân trang):
+| Tham số | Kiểu | Mặc định | Mô tả |
+|---|---|---|---|
+| `status` | `PaymentStatus` | — | Lọc theo trạng thái (`PENDING`, `SUCCESS`, `FAILED`, `REFUNDED`). |
+| `paymentMethod` | `PaymentMethod` | — | Lọc theo phương thức (`CASH`, `BANK_TRANSFER`, `E_WALLET`). |
+| `bookingId` | `Long` | — | Lọc theo mã đơn đặt sân. |
+| `fromDate` | `LocalDate` (`YYYY-MM-DD`) | — | Lọc giao dịch tạo từ đầu ngày `fromDate` (`createdAt >= fromDate 00:00:00`). |
+| `toDate` | `LocalDate` (`YYYY-MM-DD`) | — | Lọc giao dịch tạo đến cuối ngày `toDate` (`createdAt <= toDate 23:59:59.999999999`). |
+| `page` | `int` | `0` | Chỉ số trang (bắt đầu từ `0`). |
+| `size` | `int` | `10` | Số lượng phần tử mỗi trang. |
+| `sort` | `String` | `createdAt,desc` | Trường sắp xếp hợp lệ (whitelist): `id`, `amount`, `paidAt`, `createdAt` kèm chiều `asc` hoặc `desc`. |
+
+### 3.2. Response Thành Công (200 OK):
+```json
+{
+  "success": true,
+  "message": "Lấy lịch sử giao dịch thành công",
+  "data": {
+    "items": [
+      {
+        "id": 1,
+        "bookingId": 10,
+        "amount": 400000.00,
+        "paymentType": "FULL",
+        "paymentMethod": "E_WALLET",
+        "status": "SUCCESS",
+        "transactionRef": "MOCK-550e8400-e29b-41d4-a716-446655440000",
+        "paidAt": "2026-10-22T10:15:30",
+        "note": "Khách thanh toán toàn phần qua ví điện tử",
+        "createdAt": "2026-10-22T10:15:30",
+        "updatedAt": "2026-10-22T10:15:30"
+      }
+    ],
+    "page": 0,
+    "size": 10,
+    "totalElements": 1,
+    "totalPages": 1,
+    "first": true,
+    "last": true
+  }
+}
+```
+
+### 3.3. Các Mã Lỗi Thường Gặp:
+- **400 Bad Request (`BAD_REQUEST`):** `fromDate` lớn hơn `toDate`.
+- **400 Bad Request (`INVALID_SORT_FIELD`):** Trường sắp xếp không nằm trong whitelist (`id`, `amount`, `paidAt`, `createdAt`).
+- **401 Unauthorized:** Chưa đăng nhập.
+- **403 Forbidden:** Khách hàng (`CUSTOMER`) không có quyền truy cập endpoint này.
+
+---
+
+## 4. Lịch Sử Giao Dịch Của Tôi (Get My Payments)
+
+Cho phép người dùng đang đăng nhập xem lại toàn bộ các giao dịch thanh toán gắn với đơn đặt sân của chính mình (`booking.user.id == currentUserId`).
+
+- **Endpoint:** `GET /api/v1/payments/my`
+- **Quyền hạn:** `@PreAuthorize("isAuthenticated()")`
+- **Headers:** `Authorization: Bearer <access_token>`
+
+### 4.1. Query Parameters:
+- Giống mục **3.1** (`status`, `paymentMethod`, `bookingId`, `fromDate`, `toDate`, `page`, `size`, `sort`), đồng thời hệ thống tự động ràng buộc thêm điều kiện chỉ trả về các giao dịch thuộc đơn đặt sân của `currentUserId`.
+
+### 4.2. Response Thành Công (200 OK):
+- Trả về `ApiResponse<PageResponse<PaymentResponse>>` với message `"Lấy lịch sử giao dịch của bạn thành công"` (cấu trúc giống mục **3.2**).
+
+### 4.3. Các Mã Lỗi Thường Gặp:
+- **400 Bad Request (`BAD_REQUEST`):** `fromDate` lớn hơn `toDate`.
+- **400 Bad Request (`INVALID_SORT_FIELD`):** Trường sắp xếp không hợp lệ.
+- **401 Unauthorized:** Chưa đăng nhập.
+
+---
+
+## 5. Chi Tiết Hóa Đơn Giao Dịch (Get Payment Detail / Invoice)
+
+Trả về thông tin đầy đủ của một giao dịch thanh toán kèm thông tin đơn đặt sân, sân/cụm sân, khung giờ và thông tin khách hàng để hiển thị hoặc in hóa đơn.
+
+- **Endpoint:** `GET /api/v1/payments/{id}`
+- **Quyền hạn:** `@PreAuthorize("isAuthenticated()")`
+- **Kiểm tra quyền tại Service:**
+  - `STAFF` hoặc `ADMIN` có quyền xem bất kỳ hóa đơn nào (bao gồm đơn đặt tại quầy cho khách vãng lai).
+  - `CUSTOMER` chỉ được xem hóa đơn thuộc đơn đặt sân của chính mình (`booking.user != null && booking.user.id == currentUserId`). Nếu cố tình xem hóa đơn của người khác hoặc đơn khách vãng lai (`booking.user == null`) $\rightarrow$ ném lỗi **403 Forbidden (`ACCESS_DENIED`)**.
+- **Headers:** `Authorization: Bearer <access_token>`
+
+### 5.1. Response Thành Công (200 OK):
+```json
+{
+  "success": true,
+  "message": "Lấy chi tiết hóa đơn giao dịch thành công",
+  "data": {
+    "id": 1,
+    "bookingId": 10,
+    "amount": 400000.00,
+    "paymentType": "FULL",
+    "paymentMethod": "E_WALLET",
+    "status": "SUCCESS",
+    "transactionRef": "MOCK-550e8400-e29b-41d4-a716-446655440000",
+    "paidAt": "2026-10-22T10:15:30",
+    "note": "Khách thanh toán toàn phần qua ví điện tử",
+    "createdAt": "2026-10-22T10:15:30",
+    "updatedAt": "2026-10-22T10:15:30",
+    "bookingDate": "2026-11-15",
+    "startTime": "18:00:00",
+    "endTime": "19:00:00",
+    "courtName": "Sân 1",
+    "complexName": "Cụm Sân Cầu Giấy",
+    "bookingStatus": "CONFIRMED",
+    "bookingTotalAmount": 400000.00,
+    "customerName": "Nguyễn Văn A",
+    "customerPhone": "0901234567",
+    "customerEmail": "user@example.com"
+  }
+}
+```
+*(Lưu ý: Với đơn khách vãng lai đặt tại quầy, `customerName` và `customerPhone` lấy từ `guestName`/`guestPhone`, còn `customerEmail` có giá trị `null`).*
+
+### 5.2. Các Mã Lỗi Thường Gặp:
+- **401 Unauthorized:** Chưa đăng nhập.
+- **403 Forbidden (`ACCESS_DENIED`):** Khách hàng (`CUSTOMER`) xem hóa đơn của người khác hoặc hóa đơn khách vãng lai.
+- **404 Not Found (`PAYMENT_NOT_FOUND`):** Không tìm thấy giao dịch thanh toán với `id` cung cấp.

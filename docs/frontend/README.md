@@ -92,6 +92,16 @@ FE/
     │   │   ├── PaymentCollectCard.tsx       # Card công cụ thu tiền đơn PENDING tại quầy cho STAFF/ADMIN
     │   │   ├── PaymentRefundCard.tsx        # Card công cụ hoàn tiền giao dịch cho STAFF/ADMIN
     │   │   └── ConfirmRefundDialog.tsx      # Modal cảnh báo thao tác hoàn tiền một chiều
+    │   ├── report/                     # Các component con của phân hệ Báo cáo Quản trị (ADMIN)
+    │   │   ├── ReportFilterBar.tsx          # Thanh lọc khoảng ngày, groupBy (Doanh thu) & courtId (Công suất)
+    │   │   ├── RevenueKpiGrid.tsx           # Lưới 4 thẻ KPI doanh thu (Net, Gross, Refunded, TransactionCount)
+    │   │   ├── PaymentMethodBreakdownCard.tsx # Bảng phân tích 3 phương thức thanh toán (tự bù 0đ)
+    │   │   ├── RevenueTimelineChart.tsx     # Biểu đồ cột CSS thuần hiển thị dòng thời gian doanh thu
+    │   │   ├── RevenueReportSection.tsx     # Khu vực Báo cáo Doanh thu
+    │   │   ├── OccupancyOverviewCard.tsx    # Thẻ tổng quan tỉ lệ lấp đầy chung
+    │   │   ├── CourtOccupancyTable.tsx      # Bảng công suất theo từng sân
+    │   │   ├── DailyOccupancyTable.tsx      # Bảng công suất theo từng ngày
+    │   │   └── OccupancyReportSection.tsx   # Khu vực Báo cáo Công suất sân
     │   └── dashboard/                  # Các component con của trang Tổng quan
     │       ├── DashboardWelcomeBanner.tsx    # Banner chào mừng người dùng theo vai trò
     │       ├── DashboardStatCard.tsx         # Thẻ KPI đơn lẻ (số monospace + tonal badge)
@@ -107,7 +117,8 @@ FE/
     │   ├── auth.ts                     # Các hàm lưu/xóa localStorage và chuẩn hóa Role
     │   ├── booking.ts                  # Các hàm gọi API và tiện ích đặt sân / check-in
     │   ├── voucher.ts                  # Các hàm gọi API và tiện ích định dạng voucher
-    │   └── payment.ts                  # Các hàm gọi API thanh toán và hoàn tiền
+    │   ├── payment.ts                  # Các hàm gọi API thanh toán và hoàn tiền
+    │   └── report.ts                   # Các hàm gọi API báo cáo doanh thu, công suất & danh sách sân
     ├── pages/                          # Các trang Page mỏng (chỉ ghép nối các component con)
     │   ├── auth/
     │   │   ├── LoginPage.tsx           # /login (ghép AuthCardLayout + LoginForm)
@@ -123,6 +134,8 @@ FE/
     │   │   └── VouchersPage.tsx        # /vouchers (Ghép AdminVouchersView hoặc CustomerVouchersView)
     │   ├── payment/
     │   │   └── PaymentsPage.tsx        # /payments (Ghép PaymentCollectCard + PaymentRefundCard)
+    │   ├── report/
+    │   │   └── ReportsPage.tsx         # /reports (Ghép ReportFilterBar + Revenue + Occupancy)
     │   ├── dashboard/
     │   │   └── DashboardPage.tsx       # / (ghép Banner + StatsGrid + ChartPlaceholder)
     │   └── errors/
@@ -135,7 +148,8 @@ FE/
     │   ├── auth.ts                     # TypeScript interfaces khớp 100% với Backend DTO Auth/User
     │   ├── booking.ts                  # TypeScript interfaces khớp 100% với Backend DTO Booking
     │   ├── voucher.ts                  # TypeScript interfaces khớp 100% với Backend DTO Voucher
-    │   └── payment.ts                  # TypeScript interfaces khớp 100% với Backend DTO Payment
+    │   ├── payment.ts                  # TypeScript interfaces khớp 100% với Backend DTO Payment
+    │   └── report.ts                   # TypeScript interfaces khớp 100% với Backend DTO Report
     ├── App.tsx
     ├── main.tsx
     └── index.css                       # Khai báo CSS Variables tông màu chuẩn shadcn/ui Zinc + Slate
@@ -164,7 +178,7 @@ Hệ thống Frontend bao gồm tổng cộng **16 đường dẫn (Routes)**, c
 | 8 | `/users` | Quản lý người dùng | ✅ | ❌ | ❌ | Placeholder + Badge `"Phase sau"` |
 | 9 | `/payments` | Thanh toán & Hoàn tiền | ✅ | ✅ | ❌ | **Hoàn thiện 100% (Nối API thật)** |
 | 10 | `/vouchers` | Khuyến mãi / Ưu đãi | ✅ *(Quản lý)* | ❌ | ✅ *(Xem mã & áp mã)* | **Hoàn thiện 100% (Nối API thật)** |
-| 11 | `/reports` | Báo cáo thống kê | ✅ | ❌ | ❌ | Placeholder + Badge `"Phase sau"` |
+| 11 | `/reports` | Báo cáo thống kê | ✅ | ❌ | ❌ | **Hoàn thiện 100% (Nối API thật)** |
 | 12 | `/pos` | Đặt sân tại quầy (POS) | ✅ | ✅ | ❌ | **Hoàn thiện 100% (Nối API thật)** |
 | 13 | `/check-in` | Check-in khách đến sân | ✅ | ✅ | ❌ | **Hoàn thiện 100% (Nối API thật)** |
 | 14 | `/booking` | Đặt sân trực tuyến | ❌ | ❌ | ✅ | **Hoàn thiện 100% (Nối API thật)** |
@@ -186,3 +200,4 @@ Hệ thống Frontend bao gồm tổng cộng **16 đường dẫn (Routes)**, c
 4. 🏪 **Đặc tả Chi tiết Phase 3 (POS Booking + Check-in):** [`docs/frontend/phase-3-pos-checkin.md`](phase-3-pos-checkin.md)
 5. 🎟️ **Đặc tả Chi tiết Phase 4 (Voucher Management + Apply Voucher):** [`docs/frontend/phase-4-vouchers.md`](phase-4-vouchers.md)
 6. 💳 **Đặc tả Chi tiết Phase 5 (Thanh toán + Hoàn tiền):** [`docs/frontend/phase-5-payments.md`](phase-5-payments.md)
+7. 📊 **Đặc tả Chi tiết Phase 6 (Báo cáo Doanh thu + Công suất sân):** [`docs/frontend/phase-6-reports.md`](phase-6-reports.md)

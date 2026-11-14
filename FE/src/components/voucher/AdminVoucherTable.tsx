@@ -243,7 +243,7 @@ export function AdminVoucherTable({
 
                     {/* Active Status Badge */}
                     <td className="px-3 py-3.5 align-top text-center">
-                      <Badge variant={voucher.active ? 'zinc' : 'outline'}>
+                      <Badge variant={voucher.active ? 'success' : 'secondary'}>
                         {voucher.active ? 'Đang bật' : 'Đã tắt'}
                       </Badge>
                     </td>

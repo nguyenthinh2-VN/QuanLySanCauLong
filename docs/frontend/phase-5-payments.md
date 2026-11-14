@@ -133,8 +133,26 @@ Màn hình gồm 2 công cụ độc lập đặt trong lưới 2 cột (`lg:gri
 - **Hàm API:**
   - `createPayment(request)`: `POST /api/v1/payments` (Auth)
   - `refundPayment(paymentId, request)`: `POST /api/v1/payments/{id}/refund` (STAFF/ADMIN)
+  - `getPayments(params)`: `GET /api/v1/payments` (STAFF/ADMIN)
+  - `getMyPayments(params)`: `GET /api/v1/payments/my` (Auth)
+  - `getPaymentById(paymentId)`: `GET /api/v1/payments/{id}` (Auth — STAFF/ADMIN xem tất cả, CUSTOMER chỉ xem đơn của mình)
 - **Tái sử dụng tiện ích:**
   - Tiền tệ: `formatVnd(amount)` từ `@/lib/voucher`.
   - Ngày giờ: `formatDateTimeVi(iso)` từ `@/lib/voucher`.
   - Xử lý lỗi: `extractErrorMessage(error)` từ `@/lib/auth`.
+
+---
+
+## 5. Bổ Sung: Lịch Sử Giao Dịch & Chi Tiết Hóa Đơn
+
+### 5.1. API Backend Bổ Sung (`PaymentController`)
+- `GET /api/v1/payments` (`STAFF`, `ADMIN`): Lịch sử giao dịch toàn hệ thống (phân trang, lọc theo `status`, `paymentMethod`, `bookingId`, `fromDate`, `toDate`, sắp xếp `createdAt`/`paidAt`/`amount`/`id`).
+- `GET /api/v1/payments/my` (`Authenticated`): Lịch sử giao dịch của chính người dùng đang đăng nhập.
+- `GET /api/v1/payments/{id}` (`Authenticated`): Chi tiết hóa đơn (`PaymentDetailResponse` gồm thông tin giao dịch + sân/cụm sân/khung giờ/khách hàng). `CUSTOMER` xem hóa đơn người khác hoặc đơn vãng lai bị chặn `403 ACCESS_DENIED`.
+
+### 5.2. Thành Phần Giao Diện Bổ Sung (`FE/src/components/payment/`)
+- `PaymentHistoryFilterBar.tsx`: Bộ lọc trạng thái, phương thức, mã đơn (cho STAFF/ADMIN), khoảng ngày (`fromDate`–`toDate`), sắp xếp và nút Đặt lại.
+- `PaymentHistoryTable.tsx`: Bảng phân tách rõ `Mã GD (#id)` và `Mã đơn (#bookingId)`, nút **"Xem hóa đơn"** và nút **"Hoàn tiền"** (chỉ hiện với STAFF/ADMIN trên dòng `SUCCESS`) tự điền `paymentId` vào `PaymentRefundCard`.
+- `PaymentInvoiceDialog.tsx`: Modal hiển thị chi tiết hóa đơn (gọi `GET /api/v1/payments/{id}`), hỗ trợ in (`window.print()`).
+- `PaymentHistorySection.tsx`: Khối điều phối dùng chung cho cả `/payments` (`mode="staff"`) và tab **"Lịch sử giao dịch"** trong `/my-bookings` (`mode="customer"`).
 

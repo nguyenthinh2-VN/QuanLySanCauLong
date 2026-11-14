@@ -7,7 +7,7 @@ export interface StatCardItem {
   unit?: string;
   subtext: string;
   badgeText: string;
-  badgeVariant: 'zinc' | 'sky' | 'indigo' | 'amber';
+  badgeVariant: 'zinc' | 'sky' | 'indigo' | 'amber' | 'success' | 'destructive';
   accentBarClass: string;
 }
 

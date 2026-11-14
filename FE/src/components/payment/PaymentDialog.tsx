@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AuthAlert } from '@/components/auth/AuthAlert';
+import { PaymentVoucherBox } from '@/components/payment/PaymentVoucherBox';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -21,6 +22,7 @@ import {
   type PaymentResponse,
   type PaymentType,
 } from '@/types/payment';
+import type { ApplyVoucherResponse } from '@/types/voucher';
 
 export interface PaymentDialogProps {
   booking: BookingResponse | null;
@@ -41,14 +43,28 @@ export function PaymentDialog({
   const [paymentMethod, setPaymentMethod] =
     useState<PaymentMethod>('BANK_TRANSFER');
   const [note, setNote] = useState<string>('');
+  const [appliedVoucher, setAppliedVoucher] =
+    useState<ApplyVoucherResponse | null>(null);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (open) {
+      setPaymentType('FULL');
+      setPaymentMethod('BANK_TRANSFER');
+      setNote('');
+      setAppliedVoucher(null);
+      setErrorMessage(null);
+    }
+  }, [open, booking?.id]);
+
   if (!open || !booking) return null;
 
-  // Preview amount calculations
-  const totalAmount = booking.totalAmount;
-  const depositAmount = Math.round(totalAmount * 0.5);
+  // Preview amount calculations (HALF_UP 2 chữ số thập phân)
+  const totalAmount = appliedVoucher
+    ? appliedVoucher.finalAmount
+    : booking.totalAmount;
+  const depositAmount = Math.round(Math.round(totalAmount * 100) * 0.5) / 100;
   const previewAmount = paymentType === 'FULL' ? totalAmount : depositAmount;
 
   async function handleSubmit(e: React.FormEvent) {
@@ -124,11 +140,22 @@ export function PaymentDialog({
               </div>
               <div className="flex items-center justify-between border-t border-zinc-200/80 pt-2 text-zinc-700">
                 <span>Tổng tiền đơn (đã áp voucher nếu có):</span>
-                <span className="font-sans text-sm font-bold text-zinc-900">
+                <span className="font-sans text-sm font-bold text-emerald-700">
                   {formatVnd(totalAmount)}
                 </span>
               </div>
             </div>
+
+            {/* Manual Voucher Input */}
+            <PaymentVoucherBox
+              bookingId={booking.id}
+              disabled={submitting}
+              appliedVoucher={appliedVoucher}
+              onApplied={(res) => {
+                setAppliedVoucher(res);
+                onNeedRefresh?.();
+              }}
+            />
 
             {/* Payment Type Selection */}
             <div className="space-y-2">
@@ -146,19 +173,17 @@ export function PaymentDialog({
                       type="button"
                       disabled={submitting}
                       onClick={() => setPaymentType(type)}
-                      className={`flex flex-col rounded-lg border p-3 text-left transition-colors ${
-                        selected
-                          ? 'border-zinc-900 bg-zinc-900 text-white shadow-xs'
-                          : 'border-zinc-200 bg-white text-zinc-800 hover:bg-zinc-50'
-                      }`}
+                      className={`flex flex-col rounded-lg border p-3 text-left transition-colors ${selected
+                        ? 'border-emerald-600 bg-emerald-600 text-white shadow-xs'
+                        : 'border-zinc-200 bg-white text-zinc-800 hover:bg-zinc-50'
+                        }`}
                     >
                       <span className="font-semibold text-xs">
                         {PAYMENT_TYPE_LABELS[type]}
                       </span>
                       <span
-                        className={`mt-1 font-sans text-sm font-bold ${
-                          selected ? 'text-zinc-100' : 'text-zinc-900'
-                        }`}
+                        className={`mt-1 font-sans text-sm font-bold ${selected ? 'text-emerald-50' : 'text-zinc-900'
+                          }`}
                       >
                         {formatVnd(estAmount)}
                       </span>
@@ -196,11 +221,10 @@ export function PaymentDialog({
                         type="button"
                         disabled={submitting}
                         onClick={() => setPaymentMethod(method)}
-                        className={`rounded-lg border px-3 py-2 text-center text-xs font-medium transition-colors ${
-                          selected
-                            ? 'border-zinc-900 bg-zinc-900 text-white'
-                            : 'border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50'
-                        }`}
+                        className={`rounded-lg border px-3 py-2 text-center text-xs font-medium transition-colors ${selected
+                          ? 'border-emerald-600 bg-emerald-600 text-white'
+                          : 'border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50'
+                          }`}
                       >
                         {PAYMENT_METHOD_LABELS[method]}
                       </button>
@@ -245,7 +269,6 @@ export function PaymentDialog({
               type="submit"
               size="sm"
               disabled={submitting}
-              className="bg-zinc-900 text-white hover:bg-zinc-800"
             >
               {submitting ? 'Đang thanh toán...' : 'Xác nhận thanh toán'}
             </Button>

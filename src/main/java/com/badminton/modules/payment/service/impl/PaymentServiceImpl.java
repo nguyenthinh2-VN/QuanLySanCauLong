@@ -4,7 +4,9 @@ import com.badminton.modules.booking.entity.Booking;
 import com.badminton.modules.booking.entity.BookingStatus;
 import com.badminton.modules.booking.repository.BookingRepository;
 import com.badminton.modules.payment.dto.request.CreatePaymentRequest;
+import com.badminton.modules.payment.dto.request.PaymentFilterRequest;
 import com.badminton.modules.payment.dto.request.RefundPaymentRequest;
+import com.badminton.modules.payment.dto.response.PaymentDetailResponse;
 import com.badminton.modules.payment.dto.response.PaymentResponse;
 import com.badminton.modules.payment.entity.Payment;
 import com.badminton.modules.payment.entity.PaymentStatus;
@@ -19,8 +21,16 @@ import com.badminton.security.userdetails.CustomUserDetails;
 import com.badminton.shared.constant.RoleConstants;
 import com.badminton.shared.exception.AppException;
 import com.badminton.shared.exception.ErrorCode;
+import com.badminton.shared.response.PageResponse;
+import com.badminton.shared.util.SortUtils;
+import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -28,12 +38,18 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class PaymentServiceImpl implements PaymentService {
+
+    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of("id", "amount", "paidAt", "createdAt");
 
     private final PaymentRepository paymentRepository;
     private final BookingRepository bookingRepository;
@@ -154,5 +170,89 @@ public class PaymentServiceImpl implements PaymentService {
                 request != null ? request.getReason() : null);
 
         return paymentMapper.toResponse(savedPayment);
+    }
+
+    @Override
+    public PageResponse<PaymentResponse> getPayments(PaymentFilterRequest filter, int page, int size, String sort) {
+        validateDateRange(filter);
+        Sort parsedSort = SortUtils.parseSort(sort, "createdAt", Sort.Direction.DESC, ALLOWED_SORT_FIELDS);
+        Pageable pageable = PageRequest.of(page, size, parsedSort);
+        Page<PaymentResponse> result = paymentRepository
+                .findAll(buildSpecification(filter, null), pageable)
+                .map(paymentMapper::toResponse);
+        return PageResponse.from(result);
+    }
+
+    @Override
+    public PageResponse<PaymentResponse> getMyPayments(PaymentFilterRequest filter, int page, int size, String sort) {
+        CustomUserDetails currentUser = SecurityUtils.getCurrentUserDetails()
+                .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
+        validateDateRange(filter);
+        Sort parsedSort = SortUtils.parseSort(sort, "createdAt", Sort.Direction.DESC, ALLOWED_SORT_FIELDS);
+        Pageable pageable = PageRequest.of(page, size, parsedSort);
+        Page<PaymentResponse> result = paymentRepository
+                .findAll(buildSpecification(filter, currentUser.getId()), pageable)
+                .map(paymentMapper::toResponse);
+        return PageResponse.from(result);
+    }
+
+    @Override
+    public PaymentDetailResponse getPaymentById(Long paymentId) {
+        Payment payment = paymentRepository.findDetailById(paymentId)
+                .orElseThrow(() -> new AppException(ErrorCode.PAYMENT_NOT_FOUND));
+
+        CustomUserDetails currentUser = SecurityUtils.getCurrentUserDetails()
+                .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
+        boolean isStaffOrAdmin = currentUser.getAuthorities().stream()
+                .anyMatch(a -> RoleConstants.ROLE_ADMIN.equals(a.getAuthority())
+                        || RoleConstants.ROLE_STAFF.equals(a.getAuthority()));
+
+        if (!isStaffOrAdmin) {
+            if (payment.getBooking().getUser() == null
+                    || !payment.getBooking().getUser().getId().equals(currentUser.getId())) {
+                throw new AppException(ErrorCode.ACCESS_DENIED,
+                        "Bạn không có quyền xem hóa đơn giao dịch này");
+            }
+        }
+
+        return paymentMapper.toDetailResponse(payment);
+    }
+
+    private void validateDateRange(PaymentFilterRequest filter) {
+        if (filter != null && filter.getFromDate() != null && filter.getToDate() != null
+                && filter.getFromDate().isAfter(filter.getToDate())) {
+            throw new AppException(ErrorCode.BAD_REQUEST, "Ngày bắt đầu không được sau ngày kết thúc");
+        }
+    }
+
+    private Specification<Payment> buildSpecification(PaymentFilterRequest filter, Long ownerUserId) {
+        return (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            if (ownerUserId != null) {
+                predicates.add(cb.equal(root.get("booking").get("user").get("id"), ownerUserId));
+            }
+            if (filter != null) {
+                if (filter.getStatus() != null) {
+                    predicates.add(cb.equal(root.get("status"), filter.getStatus()));
+                }
+                if (filter.getPaymentMethod() != null) {
+                    predicates.add(cb.equal(root.get("paymentMethod"), filter.getPaymentMethod()));
+                }
+                if (filter.getBookingId() != null) {
+                    predicates.add(cb.equal(root.get("booking").get("id"), filter.getBookingId()));
+                }
+                if (filter.getFromDate() != null) {
+                    predicates.add(cb.greaterThanOrEqualTo(
+                            root.get("createdAt"),
+                            filter.getFromDate().atStartOfDay()));
+                }
+                if (filter.getToDate() != null) {
+                    predicates.add(cb.lessThanOrEqualTo(
+                            root.get("createdAt"),
+                            filter.getToDate().atTime(LocalTime.MAX)));
+                }
+            }
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
     }
 }

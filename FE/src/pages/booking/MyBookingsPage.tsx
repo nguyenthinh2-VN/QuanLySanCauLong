@@ -8,6 +8,7 @@ import {
 import { MyBookingsTable } from '@/components/booking/MyBookingsTable';
 import { RescheduleBookingDialog } from '@/components/booking/RescheduleBookingDialog';
 import { PaymentDialog } from '@/components/payment/PaymentDialog';
+import { PaymentHistorySection } from '@/components/payment/PaymentHistorySection';
 import { PaymentResultCard } from '@/components/payment/PaymentResultCard';
 import { extractErrorMessage } from '@/lib/auth';
 import { fetchMyBookings } from '@/lib/booking';
@@ -19,6 +20,9 @@ import type {
 import type { PaymentResponse } from '@/types/payment';
 
 export function MyBookingsPage() {
+  const [activeTab, setActiveTab] = useState<'bookings' | 'payments'>(
+    'bookings'
+  );
   const [statusFilter, setStatusFilter] = useState<StatusFilterValue>('ALL');
   const [fromDate, setFromDate] = useState<string>('');
   const [toDate, setToDate] = useState<string>('');
@@ -76,7 +80,36 @@ export function MyBookingsPage() {
 
   return (
     <div className="space-y-6">
-      {paymentSuccess && (
+      <div className="inline-flex rounded-lg border border-zinc-200 bg-zinc-100 p-1">
+        <button
+          type="button"
+          onClick={() => setActiveTab('bookings')}
+          className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+            activeTab === 'bookings'
+              ? 'bg-emerald-600 text-white shadow-xs'
+              : 'text-zinc-600 hover:text-zinc-900'
+          }`}
+        >
+          Đơn đặt sân của tôi
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('payments')}
+          className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+            activeTab === 'payments'
+              ? 'bg-emerald-600 text-white shadow-xs'
+              : 'text-zinc-600 hover:text-zinc-900'
+          }`}
+        >
+          Lịch sử giao dịch
+        </button>
+      </div>
+
+      {activeTab === 'payments' ? (
+        <PaymentHistorySection mode="customer" />
+      ) : (
+        <>
+          {paymentSuccess && (
         <PaymentResultCard
           payment={paymentSuccess}
           title="Thanh toán đơn đặt sân thành công"
@@ -185,6 +218,8 @@ export function MyBookingsPage() {
           void loadBookings();
         }}
       />
+        </>
+      )}
     </div>
   );
 }

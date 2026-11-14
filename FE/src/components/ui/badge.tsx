@@ -8,19 +8,21 @@ const badgeVariants = cva(
     variants: {
       variant: {
         default:
-          'border-zinc-200 bg-zinc-900 text-zinc-50',
+          'border-emerald-200 bg-emerald-50 text-emerald-700',
+        success:
+          'border-emerald-200 bg-emerald-50 text-emerald-700',
         secondary:
           'border-slate-200 bg-slate-100 text-slate-700',
         destructive:
-          'border-red-200 bg-red-50 text-red-700',
+          'border-rose-200 bg-rose-50 text-rose-700',
         outline:
           'border-slate-200 bg-white text-slate-700',
         zinc:
           'border-zinc-200 bg-zinc-100 text-zinc-800',
         sky:
-          'border-indigo-200 bg-indigo-50 text-indigo-700',
+          'border-sky-200 bg-sky-50 text-sky-700',
         indigo:
-          'border-indigo-200 bg-indigo-50 text-indigo-700',
+          'border-sky-200 bg-sky-50 text-sky-700',
         amber:
           'border-amber-200 bg-amber-50 text-amber-700',
       },

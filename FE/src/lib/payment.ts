@@ -1,7 +1,10 @@
 import api from '@/lib/api';
 import type { ApiResponse } from '@/types/auth';
+import type { PageResponse } from '@/types/booking';
 import type {
   CreatePaymentRequest,
+  PaymentDetailResponse,
+  PaymentHistoryQueryParams,
   PaymentResponse,
   RefundPaymentRequest,
 } from '@/types/payment';
@@ -19,6 +22,11 @@ export async function createPayment(
     '/payments',
     request
   );
+  if (!response.data.success || !response.data.data) {
+    throw new Error(
+      response.data.message || 'Không thể thực hiện thanh toán đơn đặt sân'
+    );
+  }
   return response.data.data;
 }
 
@@ -36,6 +44,83 @@ export async function refundPayment(
     `/payments/${paymentId}/refund`,
     request ?? {}
   );
+  if (!response.data.success || !response.data.data) {
+    throw new Error(
+      response.data.message || 'Không thể thực hiện hoàn tiền cho giao dịch này'
+    );
+  }
+  return response.data.data;
+}
+
+function cleanQueryParams(
+  params?: PaymentHistoryQueryParams
+): Record<string, string | number> {
+  if (!params) return {};
+  const cleaned: Record<string, string | number> = {};
+  if (params.status) cleaned.status = params.status;
+  if (params.paymentMethod) cleaned.paymentMethod = params.paymentMethod;
+  if (params.bookingId !== undefined) cleaned.bookingId = params.bookingId;
+  if (params.fromDate) cleaned.fromDate = params.fromDate;
+  if (params.toDate) cleaned.toDate = params.toDate;
+  if (params.page !== undefined) cleaned.page = params.page;
+  if (params.size !== undefined) cleaned.size = params.size;
+  if (params.sort) cleaned.sort = params.sort;
+  return cleaned;
+}
+
+/**
+ * Lấy lịch sử giao dịch toàn hệ thống (STAFF, ADMIN)
+ * Endpoint: GET /api/v1/payments
+ */
+export async function getPayments(
+  params?: PaymentHistoryQueryParams
+): Promise<PageResponse<PaymentResponse>> {
+  const response = await api.get<ApiResponse<PageResponse<PaymentResponse>>>(
+    '/payments',
+    { params: cleanQueryParams(params) }
+  );
+  if (!response.data.success || !response.data.data) {
+    throw new Error(
+      response.data.message || 'Không thể tải danh sách lịch sử giao dịch'
+    );
+  }
+  return response.data.data;
+}
+
+/**
+ * Lấy lịch sử giao dịch của người dùng đang đăng nhập
+ * Endpoint: GET /api/v1/payments/my
+ */
+export async function getMyPayments(
+  params?: PaymentHistoryQueryParams
+): Promise<PageResponse<PaymentResponse>> {
+  const response = await api.get<ApiResponse<PageResponse<PaymentResponse>>>(
+    '/payments/my',
+    { params: cleanQueryParams(params) }
+  );
+  if (!response.data.success || !response.data.data) {
+    throw new Error(
+      response.data.message || 'Không thể tải lịch sử giao dịch của bạn'
+    );
+  }
+  return response.data.data;
+}
+
+/**
+ * Lấy chi tiết hóa đơn giao dịch thanh toán
+ * Endpoint: GET /api/v1/payments/{id}
+ */
+export async function getPaymentById(
+  paymentId: number
+): Promise<PaymentDetailResponse> {
+  const response = await api.get<ApiResponse<PaymentDetailResponse>>(
+    `/payments/${paymentId}`
+  );
+  if (!response.data.success || !response.data.data) {
+    throw new Error(
+      response.data.message || 'Không thể tải chi tiết hóa đơn giao dịch'
+    );
+  }
   return response.data.data;
 }
 
