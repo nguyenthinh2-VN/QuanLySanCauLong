@@ -39,7 +39,7 @@ function getOrCreateClient(): Client {
     reconnectDelay: 5000,
     heartbeatIncoming: 10000,
     heartbeatOutgoing: 10000,
-    beforeConnect: async () => {
+    beforeConnect: async (client) => {
       try {
         const refreshToken = getRefreshToken();
         let token = getAccessToken();
@@ -54,8 +54,8 @@ function getOrCreateClient(): Client {
           }
         }
 
-        if (token && stompClient) {
-          stompClient.connectHeaders = {
+        if (token) {
+          client.connectHeaders = {
             Authorization: `Bearer ${token}`,
           };
         }
@@ -156,3 +156,4 @@ export function disconnectRealtime(): void {
     consecutiveFailures = 0;
   }
 }
+
