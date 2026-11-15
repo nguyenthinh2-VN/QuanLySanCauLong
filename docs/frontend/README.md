@@ -118,7 +118,8 @@ FE/
     │   ├── booking.ts                  # Các hàm gọi API và tiện ích đặt sân / check-in
     │   ├── voucher.ts                  # Các hàm gọi API và tiện ích định dạng voucher
     │   ├── payment.ts                  # Các hàm gọi API thanh toán và hoàn tiền
-    │   └── report.ts                   # Các hàm gọi API báo cáo doanh thu, công suất & danh sách sân
+    │   ├── report.ts                   # Các hàm gọi API báo cáo doanh thu, công suất & danh sách sân
+    │   └── websocket.ts                # Singleton STOMP client kết nối /ws & lắng nghe /topic/availability
     ├── pages/                          # Các trang Page mỏng (chỉ ghép nối các component con)
     │   ├── auth/
     │   │   ├── LoginPage.tsx           # /login (ghép AuthCardLayout + LoginForm)
@@ -201,3 +202,4 @@ Hệ thống Frontend bao gồm tổng cộng **16 đường dẫn (Routes)**, c
 5. 🎟️ **Đặc tả Chi tiết Phase 4 (Voucher Management + Apply Voucher):** [`docs/frontend/phase-4-vouchers.md`](phase-4-vouchers.md)
 6. 💳 **Đặc tả Chi tiết Phase 5 (Thanh toán + Hoàn tiền):** [`docs/frontend/phase-5-payments.md`](phase-5-payments.md)
 7. 📊 **Đặc tả Chi tiết Phase 6 (Báo cáo Doanh thu + Công suất sân):** [`docs/frontend/phase-6-reports.md`](phase-6-reports.md)
+8. ⚡ **Đặc tả Chi tiết Phase 7 (WebSocket Realtime Cập nhật Lịch trống):** Đã kết nối kênh `/topic/availability` tại 3 màn hình `CustomerBookingPage` (`/booking`), `PosBookingPage` (`/pos`) và modal đổi lịch `RescheduleBookingDialog`. Tự động gọi API cập nhật lại bảng lịch trống khi có thay đổi đúng ngày đang xem mà không cần tải lại trang.

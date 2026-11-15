@@ -358,3 +358,52 @@
   "data": null
 }
 ```
+
+---
+
+## 6. WebSocket STOMP Realtime Cập Nhật Lịch Trống
+
+Hệ thống hỗ trợ kênh WebSocket STOMP để tự động đẩy sự kiện thay đổi trạng thái khung giờ (slot) tới các client đang xem bảng lịch trống (tránh việc phải bấm F5 thủ công).
+
+> **LƯU Ý QUAN TRỌNG VỀ TÍNH NHẤT QUÁN DỮ LIỆU:**  
+> Cơ chế **Bi quan (Pessimistic Lock)** trên Database ở REST API mới là **nguồn sự thật duy nhất** (Source of Truth) chống double-booking. WebSocket chỉ mang tính chất thông báo cho giao diện (UI notification). Client nhận thông báo socket **không được tự suy diễn trạng thái cuối cùng** mà luôn kích hoạt refetch lại qua REST `GET /api/v1/bookings/availability` khi cần, và mọi luồng đặt sân vẫn xử lý mã lỗi `409 SLOT_ALREADY_BOOKED` như bình thường.
+
+### 6.1 Thông Tin Kết Nối
+- **Endpoint STOMP:** `/ws` (ví dụ: `ws://localhost:8080/ws`)
+- **Giao thức:** STOMP thuần qua WebSocket (không dùng SockJS)
+- **CORS:** Hỗ trợ mọi nguồn gọi hợp lệ (`setAllowedOriginPatterns("*")`)
+- **Xác thực:** Header STOMP `CONNECT`:
+  ```text
+  CONNECT
+  accept-version:1.2,1.1,1.0
+  heart-beat:10000,10000
+  Authorization:Bearer <access_token>
+  ```
+  *(Nếu token thiếu, sai định dạng hoặc hết hạn, Server sẽ từ chối kết nối ngay tại `preSend` interceptor).*
+
+### 6.2 Topic & Sự Kiện Broadcast
+- **Topic đăng ký:** `/topic/availability`
+- **Thời điểm phát tin:** Chỉ phát tin sau khi transaction nghiệp vụ đã commit thành công (`@TransactionalEventListener(phase = AFTER_COMMIT)`). Nếu transaction bị rollback (ví dụ gặp lỗi 409 xung đột), tuyệt đối không có tin nào được phát đi.
+- **5 nghiệp vụ kích hoạt phát tin:**
+  1. Đặt sân online mới (`createBooking`): Phát 1 tin `BOOKED`.
+  2. Đặt sân tại quầy POS (`createPosBooking`): Phát 1 tin `BOOKED`.
+  3. Đổi lịch đặt sân (`updateBooking`): Phát 2 tin (slot cũ thành `FREE`, slot mới thành `BOOKED`).
+  4. Hủy đặt sân (`cancelBooking`): Phát 1 tin `FREE`.
+  5. Hoàn tiền giao dịch (`refundPayment`): Chuyển đơn sang `CANCELLED`, phát 1 tin `FREE`.
+
+### 6.3 Định Dạng Payload Tin Nhắn (JSON)
+```json
+{
+  "type": "AVAILABILITY_CHANGED",
+  "courtId": 1,
+  "bookingDate": "2026-11-15",
+  "timeSlotId": 5,
+  "slotStatus": "BOOKED"
+}
+```
+- `type`: Luôn là `"AVAILABILITY_CHANGED"`
+- `courtId`: ID sân con (`Long`)
+- `bookingDate`: Ngày đặt sân (`YYYY-MM-DD`)
+- `timeSlotId`: ID khung giờ (`Long`)
+- `slotStatus`: Trạng thái mới của slot (`FREE` | `BOOKED` | `PASSED` | `UNAVAILABLE`)
+

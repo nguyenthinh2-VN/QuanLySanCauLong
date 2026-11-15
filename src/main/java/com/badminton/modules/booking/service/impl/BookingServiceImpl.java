@@ -13,6 +13,7 @@ import com.badminton.modules.booking.dto.response.SlotAvailabilityResponse;
 import com.badminton.modules.booking.entity.Booking;
 import com.badminton.modules.booking.entity.BookingStatus;
 import com.badminton.modules.booking.entity.SlotStatus;
+import com.badminton.modules.booking.event.AvailabilityChangedEvent;
 import com.badminton.modules.booking.mapper.BookingMapper;
 import com.badminton.modules.booking.repository.BookingRepository;
 import com.badminton.modules.booking.service.BookingService;
@@ -28,6 +29,7 @@ import com.badminton.shared.response.PageResponse;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -61,6 +63,7 @@ public class BookingServiceImpl implements BookingService {
     private final TimeSlotRepository timeSlotRepository;
     private final UserRepository userRepository;
     private final BookingMapper bookingMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     public List<CourtAvailabilityResponse> getAvailability(LocalDate date, Long courtId, Long complexId) {
@@ -190,6 +193,13 @@ public class BookingServiceImpl implements BookingService {
         log.info("Booking created successfully: id={}, user={}, court={}, date={}, slot={}",
                 savedBooking.getId(), user.getId(), court.getId(), request.getBookingDate(), timeSlot.getId());
 
+        eventPublisher.publishEvent(new AvailabilityChangedEvent(
+                savedBooking.getCourt().getId(),
+                savedBooking.getBookingDate(),
+                savedBooking.getTimeSlot().getId(),
+                SlotStatus.BOOKED
+        ));
+
         return bookingMapper.toResponse(savedBooking);
     }
 
@@ -280,6 +290,10 @@ public class BookingServiceImpl implements BookingService {
             throw new AppException(ErrorCode.SLOT_ALREADY_BOOKED);
         }
 
+        Long oldCourtId = booking.getCourt().getId();
+        LocalDate oldBookingDate = booking.getBookingDate();
+        Long oldTimeSlotId = booking.getTimeSlot().getId();
+
         booking.setCourt(targetCourt);
         booking.setBookingDate(targetDate);
         booking.setTimeSlot(targetSlot);
@@ -293,6 +307,19 @@ public class BookingServiceImpl implements BookingService {
         log.info("Booking updated successfully: id={}, newCourt={}, newDate={}, newSlot={}, newAmount={}",
                 updatedBooking.getId(), targetCourt.getId(), targetDate, targetSlot.getId(),
                 updatedBooking.getTotalAmount());
+
+        eventPublisher.publishEvent(new AvailabilityChangedEvent(
+                oldCourtId,
+                oldBookingDate,
+                oldTimeSlotId,
+                SlotStatus.FREE
+        ));
+        eventPublisher.publishEvent(new AvailabilityChangedEvent(
+                updatedBooking.getCourt().getId(),
+                updatedBooking.getBookingDate(),
+                updatedBooking.getTimeSlot().getId(),
+                SlotStatus.BOOKED
+        ));
 
         return bookingMapper.toResponse(updatedBooking);
     }
@@ -320,6 +347,13 @@ public class BookingServiceImpl implements BookingService {
         log.info("Booking cancelled successfully: id={}, user={}",
                 cancelledBooking.getId(),
                 booking.getUser() != null ? booking.getUser().getId() : "GUEST");
+
+        eventPublisher.publishEvent(new AvailabilityChangedEvent(
+                cancelledBooking.getCourt().getId(),
+                cancelledBooking.getBookingDate(),
+                cancelledBooking.getTimeSlot().getId(),
+                SlotStatus.FREE
+        ));
 
         return bookingMapper.toResponse(cancelledBooking);
     }
@@ -391,6 +425,13 @@ public class BookingServiceImpl implements BookingService {
                 court.getId(),
                 request.getBookingDate(),
                 timeSlot.getId());
+
+        eventPublisher.publishEvent(new AvailabilityChangedEvent(
+                savedBooking.getCourt().getId(),
+                savedBooking.getBookingDate(),
+                savedBooking.getTimeSlot().getId(),
+                SlotStatus.BOOKED
+        ));
 
         return bookingMapper.toResponse(savedBooking);
     }
@@ -501,6 +542,15 @@ public class BookingServiceImpl implements BookingService {
         List<Booking> savedBookings = bookingRepository.saveAll(bookingsToSave);
         log.info("Recurring bookings created successfully: user={}, court={}, slot={}, count={}",
                 user.getId(), court.getId(), timeSlot.getId(), savedBookings.size());
+
+        for (Booking b : savedBookings) {
+            eventPublisher.publishEvent(new AvailabilityChangedEvent(
+                    b.getCourt().getId(),
+                    b.getBookingDate(),
+                    b.getTimeSlot().getId(),
+                    SlotStatus.BOOKED
+            ));
+        }
 
         List<BookingResponse> bookingResponses = savedBookings.stream()
                 .map(bookingMapper::toResponse)

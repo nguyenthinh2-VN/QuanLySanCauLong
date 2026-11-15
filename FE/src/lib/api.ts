@@ -55,7 +55,7 @@ api.interceptors.request.use(
 
 let refreshPromise: Promise<string> | null = null;
 
-async function performTokenRefresh(): Promise<string> {
+export async function performTokenRefresh(): Promise<string> {
   const currentRefreshToken = getRefreshToken();
   if (!currentRefreshToken) {
     throw new Error('Không tìm thấy refresh token');

@@ -15,6 +15,7 @@ import {
   getTodayIso,
   submitCreateBooking,
 } from '@/lib/booking';
+import { subscribeAvailability } from '@/lib/websocket';
 import type {
   BookingResponse,
   CourtAvailabilityResponse,
@@ -58,6 +59,19 @@ export function CustomerBookingPage() {
 
   useEffect(() => {
     void loadAvailability(selectedDate);
+  }, [selectedDate, loadAvailability]);
+
+  // Realtime availability cập nhật tự động qua WebSocket
+  useEffect(() => {
+    const unsubscribe = subscribeAvailability((message) => {
+      if (message.bookingDate === selectedDate) {
+        void loadAvailability(selectedDate);
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
   }, [selectedDate, loadAvailability]);
 
   const complexOptions = useMemo(() => {

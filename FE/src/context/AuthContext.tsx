@@ -15,6 +15,7 @@ import {
   setStoredUser,
   setTokens,
 } from '@/lib/auth';
+import { disconnectRealtime } from '@/lib/websocket';
 import type {
   ApiResponse,
   AuthResponseData,
@@ -131,6 +132,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       clearAuthStorage();
       setUser(null);
+      disconnectRealtime();
     }
   }, []);
 

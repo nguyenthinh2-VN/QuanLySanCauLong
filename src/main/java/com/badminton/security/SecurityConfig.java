@@ -52,7 +52,9 @@ public class SecurityConfig {
                                 "/api/v1/auth/reset-password",
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
-                                "/swagger-ui.html")
+                                "/swagger-ui.html",
+                                "/ws",
+                                "/ws/**")
                         .permitAll()
                         // Public endpoints for viewing courts, complexes, pricing and availability
                         .requestMatchers(HttpMethod.GET, "/api/v1/complexes/**").permitAll()

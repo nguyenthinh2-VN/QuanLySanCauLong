@@ -2,6 +2,8 @@ package com.badminton.modules.payment.service.impl;
 
 import com.badminton.modules.booking.entity.Booking;
 import com.badminton.modules.booking.entity.BookingStatus;
+import com.badminton.modules.booking.entity.SlotStatus;
+import com.badminton.modules.booking.event.AvailabilityChangedEvent;
 import com.badminton.modules.booking.repository.BookingRepository;
 import com.badminton.modules.payment.dto.request.CreatePaymentRequest;
 import com.badminton.modules.payment.dto.request.PaymentFilterRequest;
@@ -26,6 +28,7 @@ import com.badminton.shared.util.SortUtils;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -55,6 +58,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final BookingRepository bookingRepository;
     private final PaymentGateway paymentGateway;
     private final PaymentMapper paymentMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional
@@ -164,6 +168,15 @@ public class PaymentServiceImpl implements PaymentService {
         // Chuyển booking sang CANCELLED (soft-cancel, giữ row)
         booking.setStatus(BookingStatus.CANCELLED);
         bookingRepository.save(booking);
+
+        if (booking.getCourt() != null && booking.getTimeSlot() != null && booking.getBookingDate() != null) {
+            eventPublisher.publishEvent(new AvailabilityChangedEvent(
+                    booking.getCourt().getId(),
+                    booking.getBookingDate(),
+                    booking.getTimeSlot().getId(),
+                    SlotStatus.FREE
+            ));
+        }
 
         log.info("Payment refunded successfully: paymentId={}, bookingId={}, amount={}, reason={}",
                 savedPayment.getId(), booking.getId(), savedPayment.getAmount(),

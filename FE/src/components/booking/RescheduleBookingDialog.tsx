@@ -24,6 +24,7 @@ import {
   shiftDateIso,
   submitUpdateBooking,
 } from '@/lib/booking';
+import { subscribeAvailability } from '@/lib/websocket';
 import type {
   BookingResponse,
   CourtAvailabilityResponse,
@@ -87,6 +88,21 @@ export function RescheduleBookingDialog({
     setSubmitError(null);
     void loadAvailabilityForDate(initialDate);
   }, [booking, todayIso, maxDateIso, loadAvailabilityForDate]);
+
+  // Realtime availability tự động cập nhật khi dialog đổi lịch đang mở
+  useEffect(() => {
+    if (!booking) return;
+
+    const unsubscribe = subscribeAvailability((message) => {
+      if (message.bookingDate === targetDate) {
+        void loadAvailabilityForDate(targetDate);
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [booking, targetDate, loadAvailabilityForDate]);
 
   if (!booking) return null;
 

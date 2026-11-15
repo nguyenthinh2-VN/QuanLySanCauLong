@@ -3,6 +3,7 @@ import { AuthAlert } from '@/components/auth/AuthAlert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { ConfirmApplyVoucherDialog } from '@/components/voucher/ConfirmApplyVoucherDialog';
 import { extractErrorMessage } from '@/lib/auth';
 import { applyVoucher, formatVnd } from '@/lib/voucher';
 import type { ApplyVoucherResponse } from '@/types/voucher';
@@ -21,33 +22,47 @@ export function PaymentVoucherBox({
   onApplied,
 }: PaymentVoucherBoxProps) {
   const [code, setCode] = useState<string>('');
+  const [pendingCode, setPendingCode] = useState<string>('');
+  const [confirmOpen, setConfirmOpen] = useState<boolean>(false);
   const [applying, setApplying] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!appliedVoucher) {
       setCode('');
+      setPendingCode('');
+      setConfirmOpen(false);
       setErrorMessage(null);
     }
   }, [bookingId, appliedVoucher]);
 
-  async function handleApply() {
+  function handleStartApply() {
     const trimmed = code.trim().toUpperCase();
     if (!trimmed) {
       setErrorMessage('Vui lòng nhập mã giảm giá trước khi áp dụng.');
       return;
     }
 
+    setErrorMessage(null);
+    setPendingCode(trimmed);
+    setConfirmOpen(true);
+  }
+
+  async function handleConfirmApply() {
+    if (!pendingCode) return;
+
     setApplying(true);
     setErrorMessage(null);
 
     try {
       const res = await applyVoucher({
-        code: trimmed,
+        code: pendingCode,
         bookingId,
       });
+      setConfirmOpen(false);
       onApplied(res);
     } catch (error) {
+      setConfirmOpen(false);
       setErrorMessage(
         extractErrorMessage(error, 'Không thể áp dụng mã giảm giá này')
       );
@@ -83,7 +98,7 @@ export function PaymentVoucherBox({
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 e.preventDefault();
-                void handleApply();
+                handleStartApply();
               }
             }}
             placeholder="Nhập mã voucher (VD: HE2026)..."
@@ -95,10 +110,10 @@ export function PaymentVoucherBox({
             variant="outline"
             size="sm"
             disabled={disabled || applying || !code.trim()}
-            onClick={() => void handleApply()}
+            onClick={handleStartApply}
             className="h-9 shrink-0 border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 hover:text-amber-900"
           >
-            {applying ? 'Đang áp...' : 'Áp dụng'}
+            Áp dụng
           </Button>
         </div>
       ) : (
@@ -126,6 +141,15 @@ export function PaymentVoucherBox({
       )}
 
       {errorMessage && <AuthAlert variant="error">{errorMessage}</AuthAlert>}
+
+      <ConfirmApplyVoucherDialog
+        open={confirmOpen}
+        bookingId={bookingId}
+        code={pendingCode}
+        submitting={applying}
+        onClose={() => setConfirmOpen(false)}
+        onConfirm={() => void handleConfirmApply()}
+      />
     </div>
   );
 }

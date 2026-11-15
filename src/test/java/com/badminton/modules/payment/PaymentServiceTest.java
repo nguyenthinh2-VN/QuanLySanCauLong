@@ -5,6 +5,8 @@ import com.badminton.modules.auth.entity.User;
 import com.badminton.modules.booking.entity.Booking;
 import com.badminton.modules.booking.entity.BookingStatus;
 import com.badminton.modules.booking.repository.BookingRepository;
+import com.badminton.modules.court.entity.Court;
+import com.badminton.modules.court.entity.TimeSlot;
 import com.badminton.modules.payment.dto.request.CreatePaymentRequest;
 import com.badminton.modules.payment.dto.request.PaymentFilterRequest;
 import com.badminton.modules.payment.dto.request.RefundPaymentRequest;
@@ -69,6 +71,9 @@ class PaymentServiceTest {
         @Mock
         private PaymentMapper paymentMapper;
 
+        @Mock
+        private org.springframework.context.ApplicationEventPublisher eventPublisher;
+
         @InjectMocks
         private PaymentServiceImpl paymentService;
 
@@ -106,8 +111,17 @@ class PaymentServiceTest {
                                 .build();
                 staff.setId(30L);
 
+                Court court = Court.builder().name("Sân 1").build();
+                court.setId(1L);
+
+                TimeSlot timeSlot = TimeSlot.builder().name("08:00 - 09:00").build();
+                timeSlot.setId(5L);
+
                 booking = Booking.builder()
                                 .user(customer)
+                                .court(court)
+                                .bookingDate(LocalDate.now().plusDays(1))
+                                .timeSlot(timeSlot)
                                 .totalAmount(new BigDecimal("400000.00"))
                                 .status(BookingStatus.PENDING)
                                 .build();
