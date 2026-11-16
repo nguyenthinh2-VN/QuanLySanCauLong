@@ -1,5 +1,5 @@
 import { Client } from '@stomp/stompjs';
-import { API_BASE_URL, performTokenRefresh } from '@/lib/api';
+import { API_BASE_URL, refreshAccessToken } from '@/lib/api';
 import { getAccessToken, getRefreshToken } from '@/lib/auth';
 
 export interface AvailabilityMessage {
@@ -24,8 +24,38 @@ let stompClient: Client | null = null;
 let consecutiveFailures = 0;
 const MAX_FAILURES = 5;
 
+// Cờ chống đếm trùng 1 lần lỗi giữa onStompError và onWebSocketClose
+let failureCounted = false;
+
+// Cờ đánh dấu đã chạm ngưỡng giới hạn 5 lần thất bại, dừng hẳn reconnect trong phiên hiện tại
+// Đánh đổi này là cố ý: dừng hẳn còn hơn reconnect vô hạn mỗi 5s làm nghẽn client & spam server khi BE down.
+// Kết nối chỉ được thử lại khi người dùng tải lại trang hoặc đăng nhập lại.
+let reconnectStopped = false;
+
 const listeners = new Set<AvailabilityHandler>();
 let topicSubscription: { unsubscribe: () => void } | null = null;
+
+function recordFailure(reason: string): void {
+  if (!failureCounted) {
+    consecutiveFailures += 1;
+    failureCounted = true;
+    console.warn(
+      `[WebSocket] Kết nối thất bại lần ${consecutiveFailures}/${MAX_FAILURES}: ${reason}`
+    );
+    checkFailureLimit();
+  }
+}
+
+function checkFailureLimit(): void {
+  if (consecutiveFailures >= MAX_FAILURES && stompClient) {
+    console.warn(
+      `[WebSocket] Đã thử kết nối thất bại ${consecutiveFailures} lần liên tiếp. Dừng kết nối hoàn toàn trong phiên này.`
+    );
+    reconnectStopped = true;
+    stompClient.reconnectDelay = 0;
+    stompClient.deactivate();
+  }
+}
 
 function getOrCreateClient(): Client {
   if (stompClient) {
@@ -44,12 +74,13 @@ function getOrCreateClient(): Client {
         const refreshToken = getRefreshToken();
         let token = getAccessToken();
 
-        // Nếu có refresh token, làm mới access token trước khi bắt tay CONNECT
+        // Nếu có refresh token, làm mới access token qua hàng đợi single-flight dùng chung trước khi CONNECT
         if (refreshToken) {
           try {
-            token = await performTokenRefresh();
+            token = await refreshAccessToken();
           } catch {
-            // Giữ token hiện tại nếu refresh tạm thời lỗi
+            // Giữ token hiện tại nếu refresh lỗi để STOMP CONNECT thử như thường
+            // (không clear storage, không redirect /login từ đường WebSocket)
             token = getAccessToken();
           }
         }
@@ -65,6 +96,8 @@ function getOrCreateClient(): Client {
     },
     onConnect: () => {
       consecutiveFailures = 0;
+      failureCounted = false;
+      reconnectStopped = false;
       if (stompClient) {
         stompClient.reconnectDelay = 5000;
       }
@@ -88,30 +121,34 @@ function getOrCreateClient(): Client {
       }
     },
     onStompError: (frame) => {
-      console.warn('[WebSocket] STOMP Error frame:', frame.headers['message']);
-      consecutiveFailures += 1;
-      checkFailureLimit();
+      const errorMsg = frame.headers['message'] || 'Lỗi giao thức STOMP';
+      console.warn('[WebSocket] STOMP Error frame:', errorMsg);
+      recordFailure(errorMsg);
     },
     onWebSocketClose: () => {
       topicSubscription = null;
+      // Chỉ tính lỗi khi client đang active (không phải do gọi deactivate() chủ động)
+      if (stompClient?.active) {
+        recordFailure('WebSocket connection closed');
+      }
+      // Đóng socket kết thúc một chu kỳ bắt tay -> clear cờ để lần thử kế tiếp được đếm
+      failureCounted = false;
     },
   });
 
   return stompClient;
 }
 
-function checkFailureLimit(): void {
-  if (consecutiveFailures >= MAX_FAILURES && stompClient) {
-    console.warn(`[WebSocket] Đã thử kết nối thất bại ${consecutiveFailures} lần. Tạm dừng kết nối.`);
-    stompClient.reconnectDelay = 0;
-    stompClient.deactivate();
-  }
-}
-
 /**
  * Đảm bảo WebSocket client được kích hoạt.
+ * Chú ý: Nếu đã chạm giới hạn 5 lần thất bại liên tiếp (reconnectStopped === true),
+ * hàm sẽ return sớm và không thử kết nối lại trong cùng phiên.
  */
 export function ensureConnected(): void {
+  if (reconnectStopped) {
+    return;
+  }
+
   const token = getAccessToken();
   if (!token) {
     return; // Chưa đăng nhập thì không cần kích hoạt kết nối WebSocket bảo mật
@@ -154,6 +191,7 @@ export function disconnectRealtime(): void {
     stompClient.deactivate();
     stompClient = null;
     consecutiveFailures = 0;
+    failureCounted = false;
+    reconnectStopped = false;
   }
 }
-

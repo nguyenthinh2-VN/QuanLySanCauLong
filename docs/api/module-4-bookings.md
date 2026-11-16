@@ -384,12 +384,13 @@ Hệ thống hỗ trợ kênh WebSocket STOMP để tự động đẩy sự ki�
 ### 6.2 Topic & Sự Kiện Broadcast
 - **Topic đăng ký:** `/topic/availability`
 - **Thời điểm phát tin:** Chỉ phát tin sau khi transaction nghiệp vụ đã commit thành công (`@TransactionalEventListener(phase = AFTER_COMMIT)`). Nếu transaction bị rollback (ví dụ gặp lỗi 409 xung đột), tuyệt đối không có tin nào được phát đi.
-- **5 nghiệp vụ kích hoạt phát tin:**
+- **6 nghiệp vụ kích hoạt phát tin:**
   1. Đặt sân online mới (`createBooking`): Phát 1 tin `BOOKED`.
   2. Đặt sân tại quầy POS (`createPosBooking`): Phát 1 tin `BOOKED`.
   3. Đổi lịch đặt sân (`updateBooking`): Phát 2 tin (slot cũ thành `FREE`, slot mới thành `BOOKED`).
   4. Hủy đặt sân (`cancelBooking`): Phát 1 tin `FREE`.
   5. Hoàn tiền giao dịch (`refundPayment`): Chuyển đơn sang `CANCELLED`, phát 1 tin `FREE`.
+  6. Đặt lịch định kỳ (`createRecurringBooking`): Phát 1 tin `BOOKED` cho mỗi đơn trong chuỗi đã lưu.
 
 ### 6.3 Định Dạng Payload Tin Nhắn (JSON)
 ```json

@@ -80,6 +80,19 @@ export async function performTokenRefresh(): Promise<string> {
   return payload.accessToken;
 }
 
+/**
+ * Quản lý single-flight refresh token: nhiều caller đồng thời
+ * (ví dụ 401 interceptor và WebSocket beforeConnect) chỉ gọi performTokenRefresh 1 lần duy nhất.
+ */
+export async function refreshAccessToken(): Promise<string> {
+  if (!refreshPromise) {
+    refreshPromise = performTokenRefresh().finally(() => {
+      refreshPromise = null;
+    });
+  }
+  return refreshPromise;
+}
+
 api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
@@ -94,12 +107,7 @@ api.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        if (!refreshPromise) {
-          refreshPromise = performTokenRefresh().finally(() => {
-            refreshPromise = null;
-          });
-        }
-        const newAccessToken = await refreshPromise;
+        const newAccessToken = await refreshAccessToken();
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         return api(originalRequest);
       } catch (refreshError) {
