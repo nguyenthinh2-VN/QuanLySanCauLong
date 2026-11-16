@@ -102,6 +102,13 @@ FE/
     │   │   ├── CourtOccupancyTable.tsx      # Bảng công suất theo từng sân
     │   │   ├── DailyOccupancyTable.tsx      # Bảng công suất theo từng ngày
     │   │   └── OccupancyReportSection.tsx   # Khu vực Báo cáo Công suất sân
+    │   ├── user/                       # Các component con của phân hệ Quản lý Người dùng (ADMIN)
+    │   │   ├── UserFilterBar.tsx            # Thanh tìm kiếm, lọc vai trò, trạng thái & nút thêm tài khoản
+    │   │   ├── UserTable.tsx                # Bảng người dùng, badge vai trò, trạng thái & các nút thao tác
+    │   │   ├── UserFormDialog.tsx           # Modal tạo mới (chỉ STAFF/CUSTOMER) & cập nhật tài khoản
+    │   │   ├── UserRolesDialog.tsx          # Modal phân quyền vai trò (chống tự tước quyền ADMIN)
+    │   │   ├── LockUserDialog.tsx           # Modal xác nhận khóa tài khoản & cảnh báo thu hồi phiên
+    │   │   └── DeleteUserDialog.tsx         # Modal xác nhận xóa vĩnh viễn tài khoản
     │   └── dashboard/                  # Các component con của trang Tổng quan
     │       ├── DashboardWelcomeBanner.tsx    # Banner chào mừng người dùng theo vai trò
     │       ├── DashboardStatCard.tsx         # Thẻ KPI đơn lẻ (số monospace + tonal badge)
@@ -120,6 +127,7 @@ FE/
     │   ├── payment.ts                  # Các hàm gọi API thanh toán và hoàn tiền
     │   ├── report.ts                   # Các hàm gọi API báo cáo doanh thu, công suất & danh sách sân
     │   ├── court.ts                    # Các hàm gọi API quản lý cụm sân, sân con & khung giờ
+    │   ├── user.ts                     # Các hàm gọi API quản lý người dùng & phân quyền (M2)
     │   └── websocket.ts                # Singleton STOMP client kết nối /ws & lắng nghe /topic/availability
     ├── pages/                          # Các trang Page mỏng (chỉ ghép nối các component con)
     │   ├── auth/
@@ -134,6 +142,8 @@ FE/
     │   │   └── CheckInPage.tsx         # /check-in (Check-in khách vào sân cho STAFF / ADMIN)
     │   ├── court/
     │   │   └── CourtsPage.tsx          # /courts (Quản lý Cụm sân, Sân con & Khung giờ - ADMIN)
+    │   ├── user/
+    │   │   └── UsersPage.tsx           # /users (Quản lý Người dùng & Phân quyền - ADMIN)
     │   ├── voucher/
     │   │   └── VouchersPage.tsx        # /vouchers (Ghép AdminVouchersView hoặc CustomerVouchersView)
     │   ├── payment/
@@ -153,7 +163,9 @@ FE/
     │   ├── booking.ts                  # TypeScript interfaces khớp 100% với Backend DTO Booking
     │   ├── voucher.ts                  # TypeScript interfaces khớp 100% với Backend DTO Voucher
     │   ├── payment.ts                  # TypeScript interfaces khớp 100% với Backend DTO Payment
-    │   └── report.ts                   # TypeScript interfaces khớp 100% với Backend DTO Report
+    │   ├── report.ts                   # TypeScript interfaces khớp 100% với Backend DTO Report
+    │   ├── court.ts                    # TypeScript interfaces khớp 100% với Backend DTO Court
+    │   └── user.ts                     # TypeScript interfaces khớp 100% với Backend DTO User Management
     ├── App.tsx
     ├── main.tsx
     └── index.css                       # Khai báo CSS Variables tông màu chuẩn shadcn/ui Zinc + Slate
@@ -179,7 +191,7 @@ Hệ thống Frontend bao gồm tổng cộng **16 đường dẫn (Routes)**, c
 | 5 | `/` | Tổng quan (Dashboard) | ✅ | ✅ | *(Redirect `/booking` hoặc xem tổng quan)* | **AppShell + 4 Stat Cards + Panel chờ** |
 | 6 | `/bookings` | Quản lý đặt sân | ✅ | ❌ | ❌ | Placeholder + Badge `"Phase sau"` |
 | 7 | `/courts` | Quản lý sân & Khung giờ | ✅ | ❌ | ❌ | **Hoàn thiện 100% (Nối API thật)** |
-| 8 | `/users` | Quản lý người dùng | ✅ | ❌ | ❌ | Placeholder + Badge `"Phase sau"` |
+| 8 | `/users` | Quản lý người dùng | ✅ | ❌ | ❌ | **Hoàn thiện 100% (Nối API thật)** |
 | 9 | `/payments` | Thanh toán & Hoàn tiền | ✅ | ✅ | ❌ | **Hoàn thiện 100% (Nối API thật)** |
 | 10 | `/vouchers` | Khuyến mãi / Ưu đãi | ✅ *(Quản lý)* | ❌ | ✅ *(Xem mã & áp mã)* | **Hoàn thiện 100% (Nối API thật)** |
 | 11 | `/reports` | Báo cáo thống kê | ✅ | ❌ | ❌ | **Hoàn thiện 100% (Nối API thật)** |
@@ -207,3 +219,4 @@ Hệ thống Frontend bao gồm tổng cộng **16 đường dẫn (Routes)**, c
 7. 📊 **Đặc tả Chi tiết Phase 6 (Báo cáo Doanh thu + Công suất sân):** [`docs/frontend/phase-6-reports.md`](phase-6-reports.md)
 8. ⚡ **Đặc tả Chi tiết Phase 7 (WebSocket Realtime Cập nhật Lịch trống):** Đã kết nối kênh `/topic/availability` tại 3 màn hình `CustomerBookingPage` (`/booking`), `PosBookingPage` (`/pos`) và modal đổi lịch `RescheduleBookingDialog`. Tự động gọi API cập nhật lại bảng lịch trống khi có thay đổi đúng ngày đang xem mà không cần tải lại trang.
 9. 🏟️ **Đặc tả Chi tiết Phase 8 (Quản lý Sân, Cụm sân & Khung giờ):** [`docs/frontend/phase-8-courts.md`](phase-8-courts.md) — Giao diện quản trị M3 dành riêng cho `ADMIN`: quản lý danh mục cụm sân, sân con và bảng khung giờ/bảng giá.
+10. 👥 **Đặc tả Chi tiết Phase 9 (Quản lý Người dùng & Phân quyền):** [`docs/frontend/phase-9-users.md`](phase-9-users.md) — Giao diện quản trị M2 dành riêng cho `ADMIN`: tra cứu tài khoản, tạo/sửa thông tin, gán vai trò quyền hạn, khóa/mở khóa tài khoản (thu hồi phiên tức thì) và xóa vĩnh viễn với 4 tầng bảo vệ (Guard).

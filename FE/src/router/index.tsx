@@ -17,6 +17,7 @@ import { VouchersPage } from '@/pages/voucher/VouchersPage';
 import { PaymentsPage } from '@/pages/payment/PaymentsPage';
 import { ReportsPage } from '@/pages/report/ReportsPage';
 import { CourtsPage } from '@/pages/court/CourtsPage';
+import { UsersPage } from '@/pages/user/UsersPage';
 
 export function AppRouter() {
   return (
@@ -50,17 +51,7 @@ export function AppRouter() {
               }
             />
             <Route path="courts" element={<CourtsPage />} />
-            <Route
-              path="users"
-              element={
-                <FeaturePlaceholder
-                  title="Quản lý Người dùng & Phân quyền"
-                  description="Tra cứu tài khoản Quản trị viên, Nhân viên và Khách hàng; khóa/mở khóa tài khoản và cấp quyền hệ thống."
-                  moduleTag="Module 2 · Users (ADMIN)"
-                  endpointHint="GET /api/v1/users"
-                />
-              }
-            />
+            <Route path="users" element={<UsersPage />} />
             <Route path="reports" element={<ReportsPage />} />
           </Route>
 
