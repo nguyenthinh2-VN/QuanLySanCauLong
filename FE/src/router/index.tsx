@@ -16,6 +16,7 @@ import { CheckInPage } from '@/pages/booking/CheckInPage';
 import { VouchersPage } from '@/pages/voucher/VouchersPage';
 import { PaymentsPage } from '@/pages/payment/PaymentsPage';
 import { ReportsPage } from '@/pages/report/ReportsPage';
+import { CourtsPage } from '@/pages/court/CourtsPage';
 
 export function AppRouter() {
   return (
@@ -48,17 +49,7 @@ export function AppRouter() {
                 />
               }
             />
-            <Route
-              path="courts"
-              element={
-                <FeaturePlaceholder
-                  title="Quản lý Sân cầu lông & Khung giờ"
-                  description="Cấu hình danh sách sân (AVAILABLE / MAINTENANCE), bảng giá theo khung giờ (Time Slots) và hình ảnh sân."
-                  moduleTag="Module 3 · Courts & Pricing (ADMIN)"
-                  endpointHint="GET /api/v1/courts"
-                />
-              }
-            />
+            <Route path="courts" element={<CourtsPage />} />
             <Route
               path="users"
               element={

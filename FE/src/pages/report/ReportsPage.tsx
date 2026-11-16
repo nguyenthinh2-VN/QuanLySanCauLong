@@ -73,6 +73,7 @@ export function ReportsPage() {
     setRevenueLoading(true);
     setOccupancyLoading(true);
     setRevenueError(null);
+    setOccupancyError(null);
 
     const parsedCourtId =
       courtId !== 'ALL' && !isNaN(Number(courtId)) ? Number(courtId) : undefined;

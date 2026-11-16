@@ -151,10 +151,18 @@ export function PaymentInvoiceDialog({
                 </div>
                 <div className="flex justify-between gap-2">
                   <span className="text-zinc-500 print:text-black">Loại khách:</span>
-                  <span className="text-right text-zinc-900 print:text-black">
-                    {detail.customerEmail || 'Khách vãng lai'}
+                  <span className="text-right font-medium text-zinc-900 print:text-black">
+                    {detail.customerEmail ? 'Thành viên' : 'Khách vãng lai'}
                   </span>
                 </div>
+                {detail.customerEmail && (
+                  <div className="flex justify-between gap-2">
+                    <span className="text-zinc-500 print:text-black">Email:</span>
+                    <span className="text-right text-zinc-900 print:text-black truncate max-w-[180px]">
+                      {detail.customerEmail}
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Booking Detail */}

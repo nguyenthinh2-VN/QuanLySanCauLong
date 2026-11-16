@@ -119,6 +119,7 @@ FE/
     │   ├── voucher.ts                  # Các hàm gọi API và tiện ích định dạng voucher
     │   ├── payment.ts                  # Các hàm gọi API thanh toán và hoàn tiền
     │   ├── report.ts                   # Các hàm gọi API báo cáo doanh thu, công suất & danh sách sân
+    │   ├── court.ts                    # Các hàm gọi API quản lý cụm sân, sân con & khung giờ
     │   └── websocket.ts                # Singleton STOMP client kết nối /ws & lắng nghe /topic/availability
     ├── pages/                          # Các trang Page mỏng (chỉ ghép nối các component con)
     │   ├── auth/
@@ -131,6 +132,8 @@ FE/
     │   │   ├── MyBookingsPage.tsx      # /my-bookings (Lịch đặt của tôi cho CUSTOMER)
     │   │   ├── PosBookingPage.tsx      # /pos (Đặt sân tại quầy cho STAFF / ADMIN)
     │   │   └── CheckInPage.tsx         # /check-in (Check-in khách vào sân cho STAFF / ADMIN)
+    │   ├── court/
+    │   │   └── CourtsPage.tsx          # /courts (Quản lý Cụm sân, Sân con & Khung giờ - ADMIN)
     │   ├── voucher/
     │   │   └── VouchersPage.tsx        # /vouchers (Ghép AdminVouchersView hoặc CustomerVouchersView)
     │   ├── payment/
@@ -175,7 +178,7 @@ Hệ thống Frontend bao gồm tổng cộng **16 đường dẫn (Routes)**, c
 |:---:|---|---|:---:|:---:|:---:|---|
 | 5 | `/` | Tổng quan (Dashboard) | ✅ | ✅ | *(Redirect `/booking` hoặc xem tổng quan)* | **AppShell + 4 Stat Cards + Panel chờ** |
 | 6 | `/bookings` | Quản lý đặt sân | ✅ | ❌ | ❌ | Placeholder + Badge `"Phase sau"` |
-| 7 | `/courts` | Quản lý sân & Khung giờ | ✅ | ❌ | ❌ | Placeholder + Badge `"Phase sau"` |
+| 7 | `/courts` | Quản lý sân & Khung giờ | ✅ | ❌ | ❌ | **Hoàn thiện 100% (Nối API thật)** |
 | 8 | `/users` | Quản lý người dùng | ✅ | ❌ | ❌ | Placeholder + Badge `"Phase sau"` |
 | 9 | `/payments` | Thanh toán & Hoàn tiền | ✅ | ✅ | ❌ | **Hoàn thiện 100% (Nối API thật)** |
 | 10 | `/vouchers` | Khuyến mãi / Ưu đãi | ✅ *(Quản lý)* | ❌ | ✅ *(Xem mã & áp mã)* | **Hoàn thiện 100% (Nối API thật)** |
@@ -203,3 +206,4 @@ Hệ thống Frontend bao gồm tổng cộng **16 đường dẫn (Routes)**, c
 6. 💳 **Đặc tả Chi tiết Phase 5 (Thanh toán + Hoàn tiền):** [`docs/frontend/phase-5-payments.md`](phase-5-payments.md)
 7. 📊 **Đặc tả Chi tiết Phase 6 (Báo cáo Doanh thu + Công suất sân):** [`docs/frontend/phase-6-reports.md`](phase-6-reports.md)
 8. ⚡ **Đặc tả Chi tiết Phase 7 (WebSocket Realtime Cập nhật Lịch trống):** Đã kết nối kênh `/topic/availability` tại 3 màn hình `CustomerBookingPage` (`/booking`), `PosBookingPage` (`/pos`) và modal đổi lịch `RescheduleBookingDialog`. Tự động gọi API cập nhật lại bảng lịch trống khi có thay đổi đúng ngày đang xem mà không cần tải lại trang.
+9. 🏟️ **Đặc tả Chi tiết Phase 8 (Quản lý Sân, Cụm sân & Khung giờ):** [`docs/frontend/phase-8-courts.md`](phase-8-courts.md) — Giao diện quản trị M3 dành riêng cho `ADMIN`: quản lý danh mục cụm sân, sân con và bảng khung giờ/bảng giá.
