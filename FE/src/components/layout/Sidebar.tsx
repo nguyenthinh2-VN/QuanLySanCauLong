@@ -142,6 +142,7 @@ const MENU_BY_ROLE: Record<Role, NavItem[]> = {
   CUSTOMER: [
     { label: 'Tổng quan', to: '/', icon: 'dashboard', end: true },
     { label: 'Đặt sân trực tuyến', to: '/booking', icon: 'calendar-plus' },
+    { label: 'Đặt lịch cố định', to: '/recurring', icon: 'calendar-plus' },
     { label: 'Lịch đặt của tôi', to: '/my-bookings', icon: 'calendar-check' },
     { label: 'Ưu đãi & Voucher', to: '/vouchers', icon: 'ticket' },
   ],

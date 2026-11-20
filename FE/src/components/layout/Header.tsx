@@ -27,6 +27,7 @@ const ROUTE_TITLES: Record<string, string> = {
   '/pos': 'Đặt sân tại quầy (POS)',
   '/check-in': 'Check-in khách đến sân',
   '/booking': 'Đặt sân trực tuyến',
+  '/recurring': 'Đặt lịch cố định hàng tuần',
   '/my-bookings': 'Lịch đặt của tôi',
   '/profile': 'Hồ sơ cá nhân',
 };

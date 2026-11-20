@@ -67,6 +67,10 @@ FE/
     │   │   ├── CourtAvailabilityGrid.tsx    # Lưới hiển thị sân và các khung giờ (FREE/BOOKED/PASSED/UNAVAILABLE)
     │   │   ├── BookingConfirmPanel.tsx      # Panel xác nhận đặt sân online cho CUSTOMER
     │   │   ├── BookingSuccessCard.tsx       # Biên nhận đặt sân online thành công (PENDING)
+    │   │   ├── RecurringBookingForm.tsx     # Form cấu hình đặt lịch cố định hàng tuần (5 bước)
+    │   │   ├── RecurringPreviewTable.tsx    # Bảng xem trước chuỗi ngày đặt & kiểm tra slot trống
+    │   │   ├── ConfirmRecurringDialog.tsx   # Modal xác nhận đặt lịch cố định & cảnh báo thanh toán lẻ
+    │   │   ├── RecurringSuccessCard.tsx     # Biên nhận chuỗi N đơn đặt thành công (PENDING)
     │   │   ├── MyBookingsFilterBar.tsx      # Bộ lọc trạng thái, khoảng ngày & sắp xếp lịch đặt
     │   │   ├── MyBookingsTable.tsx          # Bảng lịch sử đặt sân của CUSTOMER
     │   │   ├── CancelBookingDialog.tsx      # Hộp thoại xác nhận hủy lịch đặt sân
@@ -137,6 +141,7 @@ FE/
     │   │   └── ResetPasswordPage.tsx   # /reset-password (ghép AuthCardLayout + ResetPasswordForm)
     │   ├── booking/
     │   │   ├── CustomerBookingPage.tsx # /booking (Đặt sân trực tuyến cho CUSTOMER)
+    │   │   ├── RecurringBookingPage.tsx # /recurring (Đặt lịch cố định hàng tuần cho CUSTOMER)
     │   │   ├── MyBookingsPage.tsx      # /my-bookings (Lịch đặt của tôi cho CUSTOMER)
     │   │   ├── PosBookingPage.tsx      # /pos (Đặt sân tại quầy cho STAFF / ADMIN)
     │   │   └── CheckInPage.tsx         # /check-in (Check-in khách vào sân cho STAFF / ADMIN)
@@ -175,7 +180,7 @@ FE/
 
 ## 3. Bản Đồ Trang & Phân Quyền Route (Page & RBAC Map)
 
-Hệ thống Frontend bao gồm tổng cộng **16 đường dẫn (Routes)**, chia thành 3 nhóm:
+Hệ thống Frontend bao gồm tổng cộng **17 đường dẫn (Routes)**, chia thành 3 nhóm:
 
 ### 3.1. Nhóm Xác thực Công khai (Public Auth Routes — 4 trang)
 | STT | Đường dẫn | Tên màn hình | Trạng thái Phase 1 |
@@ -185,7 +190,7 @@ Hệ thống Frontend bao gồm tổng cộng **16 đường dẫn (Routes)**, c
 | 3 | `/forgot-password` | Yêu cầu khôi phục mật khẩu | **Hoàn thiện 100% (Nối API thật)** |
 | 4 | `/reset-password` | Đặt lại mật khẩu mới (`?token=...`) | **Hoàn thiện 100% (Nối API thật)** |
 
-### 3.2. Nhóm Ứng dụng Nội bộ theo Vai trò (Protected App Shell Routes — 10 trang)
+### 3.2. Nhóm Ứng dụng Nội bộ theo Vai trò (Protected App Shell Routes — 11 trang)
 | STT | Đường dẫn | Tên hiển thị trên Sidebar | `ADMIN` | `STAFF` | `CUSTOMER` | Trạng thái |
 |:---:|---|---|:---:|:---:|:---:|---|
 | 5 | `/` | Tổng quan (Dashboard) | ✅ | ✅ | *(Redirect `/booking` hoặc xem tổng quan)* | **AppShell + 4 Stat Cards + Panel chờ** |
@@ -198,13 +203,14 @@ Hệ thống Frontend bao gồm tổng cộng **16 đường dẫn (Routes)**, c
 | 12 | `/pos` | Đặt sân tại quầy (POS) | ✅ | ✅ | ❌ | **Hoàn thiện 100% (Nối API thật)** |
 | 13 | `/check-in` | Check-in khách đến sân | ✅ | ✅ | ❌ | **Hoàn thiện 100% (Nối API thật)** |
 | 14 | `/booking` | Đặt sân trực tuyến | ❌ | ❌ | ✅ | **Hoàn thiện 100% (Nối API thật)** |
-| 15 | `/my-bookings` | Lịch đặt của tôi | ❌ | ❌ | ✅ | **Hoàn thiện 100% (Nối API thật)** |
+| 15 | `/recurring` | Đặt lịch cố định | ❌ | ❌ | ✅ | **Hoàn thiện 100% (Nối API thật)** |
+| 16 | `/my-bookings` | Lịch đặt của tôi | ❌ | ❌ | ✅ | **Hoàn thiện 100% (Nối API thật)** |
 
 ### 3.3. Nhóm Trang Lỗi (Error Routes — 2 trang)
 | STT | Đường dẫn | Tên màn hình | Mô tả |
 |:---:|---|---|---|
-| 16 | `/403` | Không có quyền truy cập | Hiển thị khi `RoleRoute` phát hiện user không có quyền vào route mục tiêu |
-| 17 | `*` | Không tìm thấy trang (404) | Hiển thị khi truy cập URL không tồn tại |
+| 17 | `/403` | Không có quyền truy cập | Hiển thị khi `RoleRoute` phát hiện user không có quyền vào route mục tiêu |
+| 18 | `*` | Không tìm thấy trang (404) | Hiển thị khi truy cập URL không tồn tại |
 
 ---
 
@@ -220,3 +226,4 @@ Hệ thống Frontend bao gồm tổng cộng **16 đường dẫn (Routes)**, c
 8. ⚡ **Đặc tả Chi tiết Phase 7 (WebSocket Realtime Cập nhật Lịch trống):** Đã kết nối kênh `/topic/availability` tại 3 màn hình `CustomerBookingPage` (`/booking`), `PosBookingPage` (`/pos`) và modal đổi lịch `RescheduleBookingDialog`. Tự động gọi API cập nhật lại bảng lịch trống khi có thay đổi đúng ngày đang xem mà không cần tải lại trang.
 9. 🏟️ **Đặc tả Chi tiết Phase 8 (Quản lý Sân, Cụm sân & Khung giờ):** [`docs/frontend/phase-8-courts.md`](phase-8-courts.md) — Giao diện quản trị M3 dành riêng cho `ADMIN`: quản lý danh mục cụm sân, sân con và bảng khung giờ/bảng giá.
 10. 👥 **Đặc tả Chi tiết Phase 9 (Quản lý Người dùng & Phân quyền):** [`docs/frontend/phase-9-users.md`](phase-9-users.md) — Giao diện quản trị M2 dành riêng cho `ADMIN`: tra cứu tài khoản, tạo/sửa thông tin, gán vai trò quyền hạn, khóa/mở khóa tài khoản (thu hồi phiên tức thì) và xóa vĩnh viễn với 4 tầng bảo vệ (Guard).
+11. 🔄 **Đặc tả Chi tiết Phase 10 (Đặt Lịch Cố Định Hàng Tuần - Recurring):** [`docs/frontend/phase-10-recurring.md`](phase-10-recurring.md) — Giao diện đặt lịch định kỳ (M5) dành cho `CUSTOMER`: chọn sân, khung giờ, thứ trong tuần, xem trước chuỗi ngày (preview availability), xử lý 409 xung đột theo cơ chế all-or-nothing và thanh toán từng đơn độc lập.

@@ -8,8 +8,11 @@ import type {
   CourtAvailabilityResponse,
   CreateBookingRequest,
   CreatePosBookingRequest,
+  CreateRecurringBookingRequest,
+  DayOfWeek,
   MyBookingsQueryParams,
   PageResponse,
+  RecurringBookingResponse,
   SlotStatus,
   UpdateBookingRequest,
 } from '@/types/booking';
@@ -266,6 +269,101 @@ export function formatBookingCustomerSummary(booking: BookingResponse): {
     primaryText: booking.guestName || 'Khách vãng lai',
     secondaryText: booking.guestPhone ? `SĐT: ${booking.guestPhone}` : null,
   };
+}
+
+export const DAY_OF_WEEK_OPTIONS: {
+  key: DayOfWeek;
+  label: string;
+  jsDay: number;
+}[] = [
+  { key: 'MONDAY', label: 'Thứ Hai', jsDay: 1 },
+  { key: 'TUESDAY', label: 'Thứ Ba', jsDay: 2 },
+  { key: 'WEDNESDAY', label: 'Thứ Tư', jsDay: 3 },
+  { key: 'THURSDAY', label: 'Thứ Năm', jsDay: 4 },
+  { key: 'FRIDAY', label: 'Thứ Sáu', jsDay: 5 },
+  { key: 'SATURDAY', label: 'Thứ Bảy', jsDay: 6 },
+  { key: 'SUNDAY', label: 'Chủ Nhật', jsDay: 0 },
+];
+
+/**
+ * Tính toán danh sách các ngày đặt định kỳ hàng tuần.
+ * Mirror công thức Backend (BookingServiceImpl.createRecurringBooking):
+ * - Từ startDate, tiến từng ngày cho đến khi khớp với dayOfWeek đã chọn để xác định firstDate.
+ * - Sinh chuỗi N tuần: firstDate, firstDate + 1 tuần, ..., firstDate + (weeks - 1) tuần.
+ * - Kiểm tra ngày cuối cùng (lastDate) có vượt quá giới hạn 90 ngày tính từ hôm nay hay không.
+ */
+export function computeRecurringDates(
+  startDateIso: string,
+  dayOfWeek: DayOfWeek,
+  weeks: number
+): {
+  firstDate: string;
+  targetDates: string[];
+  lastDate: string;
+  exceedsHorizon: boolean;
+} {
+  const targetOption = DAY_OF_WEEK_OPTIONS.find((opt) => opt.key === dayOfWeek);
+  const targetJsDay = targetOption !== undefined ? targetOption.jsDay : 1;
+
+  const [y, m, d] = startDateIso.split('-').map(Number);
+  const current = new Date(y, m - 1, d);
+
+  while (current.getDay() !== targetJsDay) {
+    current.setDate(current.getDate() + 1);
+  }
+
+  const firstDate = formatLocalDateIso(current);
+  const targetDates: string[] = [];
+
+  for (let i = 0; i < weeks; i++) {
+    const iterDate = new Date(current);
+    iterDate.setDate(current.getDate() + i * 7);
+    targetDates.push(formatLocalDateIso(iterDate));
+  }
+
+  const lastDate = targetDates[targetDates.length - 1] ?? firstDate;
+
+  // Giới hạn 90 ngày tính từ hôm nay (BookingServiceImpl:496)
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const maxHorizon = new Date(today);
+  maxHorizon.setDate(today.getDate() + 90);
+
+  const [ly, lm, ld] = lastDate.split('-').map(Number);
+  const lastDateObj = new Date(ly, lm - 1, ld);
+  lastDateObj.setHours(0, 0, 0, 0);
+
+  const exceedsHorizon = lastDateObj.getTime() > maxHorizon.getTime();
+
+  return {
+    firstDate,
+    targetDates,
+    lastDate,
+    exceedsHorizon,
+  };
+}
+
+export async function submitCreateRecurringBooking(
+  payload: CreateRecurringBookingRequest
+): Promise<RecurringBookingResponse> {
+  const response = await api.post<ApiResponse<RecurringBookingResponse>>(
+    '/bookings/recurring',
+    payload
+  );
+  if (!response.data.success || !response.data.data) {
+    throw new Error(response.data.message || 'Đặt lịch cố định thất bại');
+  }
+  return response.data.data;
+}
+
+export function extractRecurringConflicts(error: unknown): string[] {
+  if (axios.isAxiosError(error)) {
+    const data = error.response?.data?.data;
+    if (Array.isArray(data)) {
+      return data.filter((item): item is string => typeof item === 'string');
+    }
+  }
+  return [];
 }
 
 

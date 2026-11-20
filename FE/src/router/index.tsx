@@ -10,6 +10,7 @@ import { ForbiddenPage } from '@/pages/errors/ForbiddenPage';
 import { NotFoundPage } from '@/pages/errors/NotFoundPage';
 import { DashboardPage } from '@/pages/dashboard/DashboardPage';
 import { CustomerBookingPage } from '@/pages/booking/CustomerBookingPage';
+import { RecurringBookingPage } from '@/pages/booking/RecurringBookingPage';
 import { MyBookingsPage } from '@/pages/booking/MyBookingsPage';
 import { PosBookingPage } from '@/pages/booking/PosBookingPage';
 import { CheckInPage } from '@/pages/booking/CheckInPage';
@@ -70,6 +71,7 @@ export function AppRouter() {
           {/* CUSTOMER Routes */}
           <Route element={<RoleRoute allowed={['CUSTOMER']} />}>
             <Route path="booking" element={<CustomerBookingPage />} />
+            <Route path="recurring" element={<RecurringBookingPage />} />
             <Route path="my-bookings" element={<MyBookingsPage />} />
           </Route>
         </Route>

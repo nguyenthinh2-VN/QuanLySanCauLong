@@ -53,6 +53,29 @@ export interface CreatePosBookingRequest {
   note?: string;
 }
 
+export type DayOfWeek =
+  | 'MONDAY'
+  | 'TUESDAY'
+  | 'WEDNESDAY'
+  | 'THURSDAY'
+  | 'FRIDAY'
+  | 'SATURDAY'
+  | 'SUNDAY';
+
+export interface CreateRecurringBookingRequest {
+  courtId: number;
+  timeSlotId: number;
+  dayOfWeek: DayOfWeek;
+  startDate: string;
+  weeks: number;
+  note?: string;
+}
+
+export interface RecurringBookingResponse {
+  createdCount: number;
+  bookings: BookingResponse[];
+}
+
 export type PosCustomerMode = 'MEMBER' | 'GUEST';
 
 export interface UpdateBookingRequest {
