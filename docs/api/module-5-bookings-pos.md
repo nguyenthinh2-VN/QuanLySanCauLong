@@ -99,6 +99,8 @@ Khác với quy trình đặt online (bắt đầu bằng `PENDING` chờ thanh 
 
 ## 2. Check-in Khách Vào Sân
 
+> **Lưu ý nghiệp vụ & FE:** Từ Phase 10 (BE), Frontend có thể lấy danh sách toàn bộ "đơn hôm nay" qua `GET /api/v1/bookings` (mặc định lấy ngày hôm nay khi không truyền `bookingDate`) và xem trước chi tiết đơn trước khi check-in qua `GET /api/v1/bookings/{id}`.
+
 Xác nhận khách hàng có mặt tại sân để nhận sân chơi cầu.
 
 - **Endpoint:** `POST /api/v1/bookings/{id}/check-in`

@@ -14,6 +14,8 @@
 | 3 | `GET` | `/my` | Authenticated | Lịch sử đặt sân của user hiện tại (phân trang, lọc, sort) |
 | 4 | `PUT` | `/{id}` | Owner hoặc ADMIN | Đổi lịch đặt sân trước giờ bắt đầu |
 | 5 | `DELETE` | `/{id}` | Owner hoặc ADMIN | Hủy lịch đặt sân (Soft-Cancel -> `CANCELLED`) |
+| 6 | `GET` | `/{id}` | Owner, STAFF hoặc ADMIN | Xem thông tin chi tiết một đơn đặt sân |
+| 7 | `GET` | `/` | STAFF hoặc ADMIN | Danh sách đơn đặt sân cho nhân viên (mặc định hôm nay, lọc, phân trang) |
 
 ---
 
@@ -361,7 +363,113 @@
 
 ---
 
-## 6. WebSocket STOMP Realtime Cập Nhật Lịch Trống
+## 6. Xem Chi Tiết Một Đơn Đặt Sân
+
+- **Endpoint:** `GET /api/v1/bookings/{id}`
+- **Quyền hạn:** `STAFF`, `ADMIN` hoặc chính chủ đơn đặt sân (`@bookingSecurity.isOwner(#id)`).
+- **Headers:** `Authorization: Bearer <access_token>`
+
+### Response Thành Công (200 OK):
+```json
+{
+  "code": 200,
+  "message": "Lấy thông tin đơn đặt sân thành công",
+  "data": {
+    "id": 105,
+    "userId": 10,
+    "userFullName": "Trần Văn Khách",
+    "userEmail": "khach@example.com",
+    "guestName": null,
+    "guestPhone": null,
+    "courtId": 1,
+    "courtName": "Sân 1 (Thảm Victor)",
+    "complexId": 1,
+    "complexName": "Cụm Sân Cầu Lông Cầu Giấy",
+    "bookingDate": "2026-11-20",
+    "timeSlotId": 3,
+    "timeSlotName": "Giờ vàng chiều tối 16:00–21:00",
+    "startTime": "16:00:00",
+    "endTime": "21:00:00",
+    "totalAmount": 750000.00,
+    "status": "CONFIRMED",
+    "note": "Đặt sân thi đấu giao hữu",
+    "createdAt": "2026-11-15T09:30:00",
+    "updatedAt": "2026-11-15T09:35:00"
+  }
+}
+```
+
+### Các Lỗi Thường Gặp:
+- **401 Unauthorized:** Chưa truyền hoặc token không hợp lệ / hết hạn.
+- **403 Forbidden:** Khách hàng thông thường (`CUSTOMER`) xem đơn đặt sân của người khác.
+- **404 Not Found (`BOOKING_NOT_FOUND`):** Đơn đặt sân với `id` cung cấp không tồn tại.
+
+---
+
+## 7. Xem Danh Sách Đơn Đặt Sân (Dành Cho Nhân Viên / Admin)
+
+- **Endpoint:** `GET /api/v1/bookings`
+- **Quyền hạn:** `STAFF` hoặc `ADMIN`. `CUSTOMER` gọi sẽ bị trả về 403 Forbidden.
+- **Headers:** `Authorization: Bearer <staff_or_admin_jwt_token>`
+- **Query Parameters (tất cả đều tùy chọn):**
+  - `bookingDate` (`LocalDate`, định dạng `YYYY-MM-DD`): Ngày cần tra cứu. **Mặc định là ngày hôm nay (`LocalDate.now()`)** nếu không truyền.
+  - `status` (`BookingStatus`): Lọc theo trạng thái đơn (`PENDING`, `CONFIRMED`, `CHECKED_IN`, `COMPLETED`, `CANCELLED`).
+  - `courtId` (`Long`): Lọc theo ID sân con.
+  - `complexId` (`Long`): Lọc theo ID cụm sân.
+  - `guestPhone` (`String`): Tìm kiếm gần đúng (contains / like) theo số điện thoại khách vãng lai.
+  - `userId` (`Long`): Lọc theo ID của khách hàng thành viên.
+  - `page` (`int`, mặc định `0`): Trang cần lấy.
+  - `size` (`int`, mặc định `10`): Số lượng bản ghi mỗi trang.
+  - `sort` (`String`, mặc định `createdAt,desc`): Sắp xếp. Whitelist hợp lệ: `bookingDate`, `createdAt`, `totalAmount`.
+
+### Response Thành Công (200 OK):
+```json
+{
+  "code": 200,
+  "message": "Lấy danh sách đơn đặt sân thành công",
+  "data": {
+    "items": [
+      {
+        "id": 105,
+        "userId": 10,
+        "userFullName": "Trần Văn Khách",
+        "userEmail": "khach@example.com",
+        "guestName": null,
+        "guestPhone": null,
+        "courtId": 1,
+        "courtName": "Sân 1 (Thảm Victor)",
+        "complexId": 1,
+        "complexName": "Cụm Sân Cầu Lông Cầu Giấy",
+        "bookingDate": "2026-11-20",
+        "timeSlotId": 3,
+        "timeSlotName": "Giờ vàng chiều tối 16:00–21:00",
+        "startTime": "16:00:00",
+        "endTime": "21:00:00",
+        "totalAmount": 750000.00,
+        "status": "CONFIRMED",
+        "note": "Khách đặt online",
+        "createdAt": "2026-11-20T08:00:00",
+        "updatedAt": "2026-11-20T08:00:00"
+      }
+    ],
+    "page": 0,
+    "size": 10,
+    "totalElements": 1,
+    "totalPages": 1,
+    "first": true,
+    "last": true
+  }
+}
+```
+
+### Các Lỗi Thường Gặp:
+- **401 Unauthorized:** Thiếu token hoặc token không hợp lệ.
+- **403 Forbidden:** Khách hàng (`CUSTOMER`) gọi vào endpoint này.
+- **400 Bad Request:** Truyền trường sắp xếp ngoài whitelist (`bookingDate`, `createdAt`, `totalAmount`).
+
+---
+
+## 8. WebSocket STOMP Realtime Cập Nhật Lịch Trống
 
 Hệ thống hỗ trợ kênh WebSocket STOMP để tự động đẩy sự kiện thay đổi trạng thái khung giờ (slot) tới các client đang xem bảng lịch trống (tránh việc phải bấm F5 thủ công).
 

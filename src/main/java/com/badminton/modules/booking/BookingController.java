@@ -44,9 +44,41 @@ import java.util.Set;
 @Tag(name = "Bookings", description = "Quản lý đặt sân online và kiểm soát xung đột đặt chỗ")
 public class BookingController {
 
-        private static final Set<String> ALLOWED_MY_BOOKINGS_SORT = Set.of("bookingDate", "createdAt", "totalAmount");
+        private static final Set<String> ALLOWED_BOOKINGS_SORT = Set.of("bookingDate", "createdAt", "totalAmount");
+        private static final Set<String> ALLOWED_MY_BOOKINGS_SORT = ALLOWED_BOOKINGS_SORT;
 
         private final BookingService bookingService;
+
+        @GetMapping
+        @PreAuthorize("hasAnyRole(T(com.badminton.shared.constant.RoleConstants).STAFF, T(com.badminton.shared.constant.RoleConstants).ADMIN)")
+        @SecurityRequirement(name = "BearerAuth")
+        @Operation(summary = "Xem danh sách đơn đặt sân (Nhân viên / Admin)", description = "Lấy danh sách đơn đặt sân có phân trang và lọc theo ngày, trạng thái, sân, cụm sân, SĐT khách vãng lai, userId. Mặc định ngày = hôm nay nếu không truyền. Sort whitelist: bookingDate, createdAt, totalAmount.")
+        public ResponseEntity<ApiResponse<PageResponse<BookingResponse>>> getBookings(
+                        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate bookingDate,
+                        @RequestParam(required = false) BookingStatus status,
+                        @RequestParam(required = false) Long courtId,
+                        @RequestParam(required = false) Long complexId,
+                        @RequestParam(required = false) String guestPhone,
+                        @RequestParam(required = false) Long userId,
+                        @RequestParam(defaultValue = "0") int page,
+                        @RequestParam(defaultValue = "10") int size,
+                        @RequestParam(defaultValue = "createdAt,desc") String sort) {
+                Sort resolvedSort = SortUtils.parseSort(sort, "createdAt", ALLOWED_BOOKINGS_SORT);
+                Pageable pageable = PageRequest.of(page, size, resolvedSort);
+                PageResponse<BookingResponse> response = bookingService.getBookings(
+                                bookingDate, status, courtId, complexId, guestPhone, userId, pageable);
+                return ResponseEntity.ok(ApiResponse.success(response, "Lấy danh sách đơn đặt sân thành công"));
+        }
+
+        @GetMapping("/{id}")
+        @PreAuthorize("hasAnyRole(T(com.badminton.shared.constant.RoleConstants).STAFF, T(com.badminton.shared.constant.RoleConstants).ADMIN) or @bookingSecurity.isOwner(#id)")
+        @SecurityRequirement(name = "BearerAuth")
+        @Operation(summary = "Xem chi tiết một đơn đặt sân", description = "STAFF, ADMIN hoặc chính chủ của đơn đặt sân xem chi tiết đơn. Trả về BookingResponse.")
+        public ResponseEntity<ApiResponse<BookingResponse>> getBookingById(
+                        @PathVariable Long id) {
+                BookingResponse response = bookingService.getBookingById(id);
+                return ResponseEntity.ok(ApiResponse.success(response, "Lấy thông tin đơn đặt sân thành công"));
+        }
 
         @GetMapping("/availability")
         @Operation(summary = "Xem lịch trống các sân theo ngày (Public)", description = "Tra cứu tình trạng các khung giờ theo ngày cụ thể (FREE, BOOKED, PASSED, UNAVAILABLE). Public không cần đăng nhập.")

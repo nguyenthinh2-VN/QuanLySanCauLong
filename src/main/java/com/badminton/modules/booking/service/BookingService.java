@@ -20,6 +20,11 @@ public interface BookingService {
 
     BookingResponse createBooking(CreateBookingRequest request);
 
+    BookingResponse getBookingById(Long id);
+
+    PageResponse<BookingResponse> getBookings(LocalDate bookingDate, BookingStatus status, Long courtId,
+            Long complexId, String guestPhone, Long userId, Pageable pageable);
+
     PageResponse<BookingResponse> getMyBookings(BookingStatus status, LocalDate fromDate, LocalDate toDate,
             Pageable pageable);
 

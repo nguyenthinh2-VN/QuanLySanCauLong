@@ -204,6 +204,45 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
+    public BookingResponse getBookingById(Long id) {
+        Booking booking = bookingRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
+        return bookingMapper.toResponse(booking);
+    }
+
+    @Override
+    public PageResponse<BookingResponse> getBookings(LocalDate bookingDate, BookingStatus status, Long courtId,
+            Long complexId, String guestPhone, Long userId, Pageable pageable) {
+        LocalDate effectiveDate = (bookingDate != null) ? bookingDate : LocalDate.now();
+
+        Specification<Booking> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            predicates.add(cb.equal(root.get("bookingDate"), effectiveDate));
+
+            if (status != null) {
+                predicates.add(cb.equal(root.get("status"), status));
+            }
+            if (courtId != null) {
+                predicates.add(cb.equal(root.get("court").get("id"), courtId));
+            }
+            if (complexId != null) {
+                predicates.add(cb.equal(root.get("court").get("complex").get("id"), complexId));
+            }
+            if (StringUtils.hasText(guestPhone)) {
+                predicates.add(cb.like(cb.lower(root.get("guestPhone")), "%" + guestPhone.trim().toLowerCase() + "%"));
+            }
+            if (userId != null) {
+                predicates.add(cb.equal(root.get("user").get("id"), userId));
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        Page<Booking> page = bookingRepository.findAll(spec, pageable);
+        return PageResponse.from(page.map(bookingMapper::toResponse));
+    }
+
+    @Override
     public PageResponse<BookingResponse> getMyBookings(BookingStatus status, LocalDate fromDate, LocalDate toDate,
             Pageable pageable) {
         Long currentUserId = SecurityUtils.getCurrentUserId()

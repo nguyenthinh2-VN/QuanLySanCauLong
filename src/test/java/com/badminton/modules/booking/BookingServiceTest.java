@@ -837,4 +837,67 @@ class BookingServiceTest {
 
         verify(courtRepository, never()).findByIdForUpdate(any());
     }
+
+    @Test
+    @DisplayName("getBookingById: tìm thấy đơn -> trả về BookingResponse")
+    void getBookingById_found_returnsResponse() {
+        Booking booking = Booking.builder()
+                .user(user)
+                .court(court)
+                .bookingDate(LocalDate.now())
+                .timeSlot(slotEvening)
+                .status(BookingStatus.CONFIRMED)
+                .totalAmount(new BigDecimal("750000"))
+                .build();
+        booking.setId(99L);
+
+        BookingResponse expectedResponse = BookingResponse.builder()
+                .id(99L)
+                .status(BookingStatus.CONFIRMED)
+                .build();
+
+        when(bookingRepository.findById(99L)).thenReturn(Optional.of(booking));
+        when(bookingMapper.toResponse(booking)).thenReturn(expectedResponse);
+
+        BookingResponse result = bookingService.getBookingById(99L);
+        assertThat(result).isNotNull();
+        assertThat(result.getId()).isEqualTo(99L);
+        verify(bookingRepository).findById(99L);
+    }
+
+    @Test
+    @DisplayName("getBookingById: không tìm thấy -> ném BOOKING_NOT_FOUND (404)")
+    void getBookingById_notFound_throwsException() {
+        when(bookingRepository.findById(999L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> bookingService.getBookingById(999L))
+                .isInstanceOf(AppException.class)
+                .satisfies(ex -> assertThat(((AppException) ex).getErrorCode()).isEqualTo(ErrorCode.BOOKING_NOT_FOUND));
+    }
+
+    @Test
+    @DisplayName("getBookings: lấy danh sách đơn có phân trang -> trả về PageResponse")
+    void getBookings_success() {
+        Booking booking = Booking.builder()
+                .user(user)
+                .court(court)
+                .bookingDate(LocalDate.now())
+                .timeSlot(slotEvening)
+                .status(BookingStatus.CONFIRMED)
+                .totalAmount(new BigDecimal("750000"))
+                .build();
+        booking.setId(99L);
+
+        Page<Booking> page = new PageImpl<>(List.of(booking));
+        when(bookingRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
+        when(bookingMapper.toResponse(booking)).thenReturn(BookingResponse.builder().id(99L).build());
+
+        PageResponse<BookingResponse> response = bookingService.getBookings(
+                LocalDate.now(), BookingStatus.CONFIRMED, 10L, 1L, "0988", 100L, PageRequest.of(0, 10)
+        );
+
+        assertThat(response).isNotNull();
+        assertThat(response.getItems()).hasSize(1);
+        assertThat(response.getItems().get(0).getId()).isEqualTo(99L);
+    }
 }
