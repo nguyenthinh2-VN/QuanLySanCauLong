@@ -24,13 +24,23 @@ export function StaffBookingsPage() {
   const primaryRole = getPrimaryRole(user?.roles ?? []);
   const isAdmin = primaryRole === 'ADMIN';
 
-  // Filter state
+  // Draft Filter state (bound to the inputs)
   const [bookingDate, setBookingDate] = useState(getTodayIso());
   const [status, setStatus] = useState<BookingStatus | ''>('');
   const [selectedComplexId, setSelectedComplexId] = useState<number | null>(null);
   const [selectedCourtId, setSelectedCourtId] = useState<number | null>(null);
   const [guestPhone, setGuestPhone] = useState('');
   const [userId, setUserId] = useState('');
+
+  // Applied Filter state (committed for API query)
+  const [appliedFilters, setAppliedFilters] = useState({
+    bookingDate: getTodayIso(),
+    status: '' as BookingStatus | '',
+    selectedComplexId: null as number | null,
+    selectedCourtId: null as number | null,
+    guestPhone: '',
+    userId: '',
+  });
   const [page, setPage] = useState(0);
 
   // Complexes & Courts for filter
@@ -63,7 +73,7 @@ export function StaffBookingsPage() {
       .catch(() => setComplexes([]));
   }, []);
 
-  // Load courts when complex changes
+  // Load courts when selectedComplexId changes
   useEffect(() => {
     if (selectedComplexId == null) {
       setCourts([]);
@@ -79,12 +89,12 @@ export function StaffBookingsPage() {
     setPageError(null);
     try {
       const result = await fetchBookings({
-        bookingDate,
-        status: status || undefined,
-        courtId: selectedCourtId ?? undefined,
-        complexId: selectedComplexId ?? undefined,
-        guestPhone: guestPhone.trim() || undefined,
-        userId: userId.trim() ? Number(userId.trim()) : undefined,
+        bookingDate: appliedFilters.bookingDate,
+        status: appliedFilters.status || undefined,
+        courtId: appliedFilters.selectedCourtId ?? undefined,
+        complexId: appliedFilters.selectedComplexId ?? undefined,
+        guestPhone: appliedFilters.guestPhone.trim() || undefined,
+        userId: appliedFilters.userId.trim() ? Number(appliedFilters.userId.trim()) : undefined,
         page,
         size: PAGE_SIZE,
         sort: 'createdAt,desc',
@@ -98,27 +108,41 @@ export function StaffBookingsPage() {
     } finally {
       setLoading(false);
     }
-  }, [bookingDate, status, selectedCourtId, selectedComplexId, guestPhone, userId, page]);
+  }, [appliedFilters, page]);
 
   useEffect(() => {
     void fetchList();
   }, [fetchList]);
 
-  function handleFilterChange<T>(setter: (val: T) => void) {
-    return (val: T) => {
-      setter(val);
-      setPage(0);
-    };
+  function handleSearch() {
+    setAppliedFilters({
+      bookingDate,
+      status,
+      selectedComplexId,
+      selectedCourtId,
+      guestPhone,
+      userId,
+    });
+    setPage(0);
   }
 
   function handleReset() {
-    setBookingDate(getTodayIso());
+    const today = getTodayIso();
+    setBookingDate(today);
     setStatus('');
     setSelectedComplexId(null);
     setSelectedCourtId(null);
     setCourts([]);
     setGuestPhone('');
     setUserId('');
+    setAppliedFilters({
+      bookingDate: today,
+      status: '',
+      selectedComplexId: null,
+      selectedCourtId: null,
+      guestPhone: '',
+      userId: '',
+    });
     setPage(0);
   }
 
@@ -193,19 +217,20 @@ export function StaffBookingsPage() {
 
       <StaffBookingFilterBar
         bookingDate={bookingDate}
-        onBookingDateChange={handleFilterChange(setBookingDate)}
+        onBookingDateChange={setBookingDate}
         status={status}
-        onStatusChange={handleFilterChange(setStatus)}
+        onStatusChange={setStatus}
         selectedComplexId={selectedComplexId}
         complexes={complexes}
-        onComplexChange={handleFilterChange(setSelectedComplexId)}
+        onComplexChange={setSelectedComplexId}
         selectedCourtId={selectedCourtId}
         courts={courts}
-        onCourtChange={handleFilterChange(setSelectedCourtId)}
+        onCourtChange={setSelectedCourtId}
         guestPhone={guestPhone}
-        onGuestPhoneChange={handleFilterChange(setGuestPhone)}
+        onGuestPhoneChange={setGuestPhone}
         userId={userId}
-        onUserIdChange={handleFilterChange(setUserId)}
+        onUserIdChange={setUserId}
+        onSearch={handleSearch}
         onReset={handleReset}
         loading={loading}
       />

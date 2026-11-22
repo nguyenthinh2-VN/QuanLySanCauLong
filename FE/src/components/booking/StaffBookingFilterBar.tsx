@@ -19,6 +19,7 @@ export interface StaffBookingFilterBarProps {
   onGuestPhoneChange: (val: string) => void;
   userId: string;
   onUserIdChange: (val: string) => void;
+  onSearch: () => void;
   onReset: () => void;
   loading: boolean;
 }
@@ -50,11 +51,18 @@ export function StaffBookingFilterBar({
   onGuestPhoneChange,
   userId,
   onUserIdChange,
+  onSearch,
   onReset,
   loading,
 }: StaffBookingFilterBarProps) {
   return (
-    <div className="rounded-xl border border-zinc-200 bg-zinc-50/70 p-3.5">
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSearch();
+      }}
+      className="space-y-3 rounded-xl border border-zinc-200 bg-zinc-50/70 p-3.5"
+    >
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         {/* Ngày */}
         <div className="space-y-1.5">
@@ -68,7 +76,6 @@ export function StaffBookingFilterBar({
             id="filter-date"
             type="date"
             value={bookingDate}
-            disabled={loading}
             onChange={(e) => {
               if (e.target.value) onBookingDateChange(e.target.value);
             }}
@@ -87,7 +94,6 @@ export function StaffBookingFilterBar({
           <select
             id="filter-status"
             value={status}
-            disabled={loading}
             onChange={(e) => onStatusChange(e.target.value as BookingStatus | '')}
             className={SELECT_CLASS}
             aria-label="Lọc trạng thái đơn đặt sân"
@@ -111,7 +117,6 @@ export function StaffBookingFilterBar({
           <select
             id="filter-complex"
             value={selectedComplexId != null ? String(selectedComplexId) : ''}
-            disabled={loading}
             onChange={(e) => {
               const val = e.target.value;
               onComplexChange(val === '' ? null : Number(val));
@@ -140,7 +145,7 @@ export function StaffBookingFilterBar({
           <select
             id="filter-court"
             value={selectedCourtId != null ? String(selectedCourtId) : ''}
-            disabled={loading || courts.length === 0}
+            disabled={courts.length === 0}
             onChange={(e) => {
               const val = e.target.value;
               onCourtChange(val === '' ? null : Number(val));
@@ -170,7 +175,6 @@ export function StaffBookingFilterBar({
             type="text"
             placeholder="Tìm 1 phần SĐT..."
             value={guestPhone}
-            disabled={loading}
             onChange={(e) => onGuestPhoneChange(e.target.value)}
             className="h-9 text-xs"
           />
@@ -184,30 +188,38 @@ export function StaffBookingFilterBar({
           >
             ID thành viên
           </Label>
-          <div className="flex items-center gap-2">
-            <Input
-              id="filter-userid"
-              type="number"
-              placeholder="ID chính xác"
-              value={userId}
-              min={1}
-              disabled={loading}
-              onChange={(e) => onUserIdChange(e.target.value)}
-              className="h-9 text-xs"
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-9 shrink-0 text-xs"
-              disabled={loading}
-              onClick={onReset}
-            >
-              Xóa lọc
-            </Button>
-          </div>
+          <Input
+            id="filter-userid"
+            type="number"
+            placeholder="ID chính xác"
+            value={userId}
+            min={1}
+            onChange={(e) => onUserIdChange(e.target.value)}
+            className="h-9 text-xs"
+          />
         </div>
       </div>
-    </div>
+
+      {/* Nút hành động: Tìm kiếm & Xóa lọc */}
+      <div className="flex items-center justify-end gap-2 border-t border-zinc-200/60 pt-2.5">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-8 px-3 text-xs"
+          onClick={onReset}
+        >
+          Xóa lọc
+        </Button>
+        <Button
+          type="submit"
+          size="sm"
+          className="h-8 px-4 text-xs font-semibold"
+          disabled={loading}
+        >
+          {loading ? 'Đang tìm...' : 'Tìm kiếm'}
+        </Button>
+      </div>
+    </form>
   );
 }
