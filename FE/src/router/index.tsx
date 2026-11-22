@@ -1,7 +1,6 @@
 import { Routes, Route } from 'react-router-dom';
 import { ProtectedRoute, RoleRoute } from '@/router/guards';
 import { AppShell } from '@/components/layout/AppShell';
-import { FeaturePlaceholder } from '@/components/layout/FeaturePlaceholder';
 import { LoginPage } from '@/pages/auth/LoginPage';
 import { RegisterPage } from '@/pages/auth/RegisterPage';
 import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage';
@@ -13,6 +12,7 @@ import { CustomerBookingPage } from '@/pages/booking/CustomerBookingPage';
 import { RecurringBookingPage } from '@/pages/booking/RecurringBookingPage';
 import { MyBookingsPage } from '@/pages/booking/MyBookingsPage';
 import { PosBookingPage } from '@/pages/booking/PosBookingPage';
+import { StaffBookingsPage } from '@/pages/booking/StaffBookingsPage';
 import { CheckInPage } from '@/pages/booking/CheckInPage';
 import { VouchersPage } from '@/pages/voucher/VouchersPage';
 import { PaymentsPage } from '@/pages/payment/PaymentsPage';
@@ -40,17 +40,6 @@ export function AppRouter() {
 
           {/* ADMIN Routes */}
           <Route element={<RoleRoute allowed={['ADMIN']} />}>
-            <Route
-              path="bookings"
-              element={
-                <FeaturePlaceholder
-                  title="Quản lý Đặt sân"
-                  description="Theo dõi toàn bộ lịch đặt sân, lọc theo trạng thái (PENDING, CONFIRMED, CHECKED_IN, COMPLETED, CANCELLED) và điều phối sân."
-                  moduleTag="Module 4 · Bookings (ADMIN)"
-                  endpointHint="GET /api/v1/bookings"
-                />
-              }
-            />
             <Route path="courts" element={<CourtsPage />} />
             <Route path="users" element={<UsersPage />} />
             <Route path="reports" element={<ReportsPage />} />
@@ -58,6 +47,7 @@ export function AppRouter() {
 
           {/* STAFF & ADMIN Shared Operational Routes */}
           <Route element={<RoleRoute allowed={['STAFF', 'ADMIN']} />}>
+            <Route path="bookings" element={<StaffBookingsPage />} />
             <Route path="pos" element={<PosBookingPage />} />
             <Route path="check-in" element={<CheckInPage />} />
             <Route path="payments" element={<PaymentsPage />} />

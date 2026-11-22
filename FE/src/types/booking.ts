@@ -134,3 +134,15 @@ export interface SelectedBookingSlot {
   slot: TimeSlotAvailability;
 }
 
+export interface StaffBookingsQueryParams {
+  bookingDate?: string;
+  status?: BookingStatus;
+  courtId?: number;
+  complexId?: number;
+  guestPhone?: string;
+  userId?: number;
+  page?: number;
+  size?: number;
+  sort?: BookingSortParam;
+}
+

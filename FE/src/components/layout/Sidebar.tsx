@@ -135,6 +135,7 @@ const MENU_BY_ROLE: Record<Role, NavItem[]> = {
   ],
   STAFF: [
     { label: 'Tổng quan', to: '/', icon: 'dashboard', end: true },
+    { label: 'Quản lý đặt sân', to: '/bookings', icon: 'calendar-check' },
     { label: 'Đặt sân tại quầy (POS)', to: '/pos', icon: 'pos' },
     { label: 'Check-in khách đến', to: '/check-in', icon: 'user-check' },
     { label: 'Thanh toán', to: '/payments', icon: 'credit-card' },

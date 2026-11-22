@@ -73,6 +73,9 @@ FE/
     │   │   ├── RecurringSuccessCard.tsx     # Biên nhận chuỗi N đơn đặt thành công (PENDING)
     │   │   ├── MyBookingsFilterBar.tsx      # Bộ lọc trạng thái, khoảng ngày & sắp xếp lịch đặt
     │   │   ├── MyBookingsTable.tsx          # Bảng lịch sử đặt sân của CUSTOMER
+     │   │   ├── StaffBookingFilterBar.tsx    # Bộ lọc ngày, trạng thái, cụm/sân, SĐT, userId cho STAFF/ADMIN
+     │   │   ├── StaffBookingsTable.tsx       # Bảng điều hành đặt sân toàn diện cho STAFF/ADMIN
+     │   │   ├── BookingDetailDialog.tsx      # Modal chi tiết đầy đủ đơn đặt sân kèm các nút tác vụ
     │   │   ├── CancelBookingDialog.tsx      # Hộp thoại xác nhận hủy lịch đặt sân
     │   │   ├── RescheduleBookingDialog.tsx  # Hộp thoại đổi lịch đặt sân
     │   │   ├── PosBookingConfirmPanel.tsx   # Panel đặt sân tại quầy (POS) với quy tắc XOR khách hàng
@@ -140,7 +143,8 @@ FE/
     │   │   ├── ForgotPasswordPage.tsx  # /forgot-password (ghép AuthCardLayout + ForgotPasswordForm)
     │   │   └── ResetPasswordPage.tsx   # /reset-password (ghép AuthCardLayout + ResetPasswordForm)
     │   ├── booking/
-    │   │   ├── CustomerBookingPage.tsx # /booking (Đặt sân trực tuyến cho CUSTOMER)
+    │   │   ├── StaffBookingsPage.tsx    # /bookings (Bảng điều hành đặt sân cho STAFF / ADMIN)
+     │   │   ├── CustomerBookingPage.tsx # /booking (Đặt sân trực tuyến cho CUSTOMER)
     │   │   ├── RecurringBookingPage.tsx # /recurring (Đặt lịch cố định hàng tuần cho CUSTOMER)
     │   │   ├── MyBookingsPage.tsx      # /my-bookings (Lịch đặt của tôi cho CUSTOMER)
     │   │   ├── PosBookingPage.tsx      # /pos (Đặt sân tại quầy cho STAFF / ADMIN)
@@ -194,7 +198,7 @@ Hệ thống Frontend bao gồm tổng cộng **17 đường dẫn (Routes)**, c
 | STT | Đường dẫn | Tên hiển thị trên Sidebar | `ADMIN` | `STAFF` | `CUSTOMER` | Trạng thái |
 |:---:|---|---|:---:|:---:|:---:|---|
 | 5 | `/` | Tổng quan (Dashboard) | ✅ | ✅ | *(Redirect `/booking` hoặc xem tổng quan)* | **AppShell + 4 Stat Cards + Panel chờ** |
-| 6 | `/bookings` | Quản lý đặt sân | ✅ | ❌ | ❌ | Placeholder + Badge `"Phase sau"` |
+| 6 | `/bookings` | Quản lý đặt sân | ✅ | ✅ | ❌ | **Hoàn thiện 100% (Nối API thật)** |
 | 7 | `/courts` | Quản lý sân & Khung giờ | ✅ | ❌ | ❌ | **Hoàn thiện 100% (Nối API thật)** |
 | 8 | `/users` | Quản lý người dùng | ✅ | ❌ | ❌ | **Hoàn thiện 100% (Nối API thật)** |
 | 9 | `/payments` | Thanh toán & Hoàn tiền | ✅ | ✅ | ❌ | **Hoàn thiện 100% (Nối API thật)** |

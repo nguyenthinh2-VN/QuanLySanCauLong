@@ -14,6 +14,7 @@ import type {
   PageResponse,
   RecurringBookingResponse,
   SlotStatus,
+  StaffBookingsQueryParams,
   UpdateBookingRequest,
 } from '@/types/booking';
 
@@ -364,6 +365,41 @@ export function extractRecurringConflicts(error: unknown): string[] {
     }
   }
   return [];
+}
+
+export async function fetchBookings(
+  params: StaffBookingsQueryParams
+): Promise<PageResponse<BookingResponse>> {
+  const cleanParams: Record<string, string | number> = {
+    page: params.page ?? 0,
+    size: params.size ?? 10,
+    sort: params.sort ?? 'createdAt,desc',
+  };
+  if (params.bookingDate) cleanParams.bookingDate = params.bookingDate;
+  if (params.status) cleanParams.status = params.status;
+  if (params.courtId != null) cleanParams.courtId = params.courtId;
+  if (params.complexId != null) cleanParams.complexId = params.complexId;
+  if (params.guestPhone) cleanParams.guestPhone = params.guestPhone;
+  if (params.userId != null) cleanParams.userId = params.userId;
+
+  const response = await api.get<ApiResponse<PageResponse<BookingResponse>>>(
+    '/bookings',
+    { params: cleanParams }
+  );
+  if (!response.data.success || !response.data.data) {
+    throw new Error(response.data.message || 'Không thể tải danh sách đơn đặt sân');
+  }
+  return response.data.data;
+}
+
+export async function fetchBookingById(id: number): Promise<BookingResponse> {
+  const response = await api.get<ApiResponse<BookingResponse>>(
+    `/bookings/${id}`
+  );
+  if (!response.data.success || !response.data.data) {
+    throw new Error(response.data.message || 'Không tìm thấy đơn đặt sân');
+  }
+  return response.data.data;
 }
 
 
