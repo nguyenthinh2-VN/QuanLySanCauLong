@@ -8,12 +8,12 @@ import {
 } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import {
+  canCheckIn,
   formatBookingCustomerSummary,
   formatCurrencyVnd,
   formatShortDateVi,
   formatTimeShort,
   getBookingStatusMeta,
-  getTodayIso,
   isBookingActionable,
 } from '@/lib/booking';
 import type { BookingResponse } from '@/types/booking';
@@ -27,22 +27,6 @@ export interface BookingDetailDialogProps {
   onReschedule?: (booking: BookingResponse) => void;
   onCancel?: (booking: BookingResponse) => void;
   isAdmin: boolean;
-}
-
-function canCheckIn(booking: BookingResponse): { allowed: boolean; reason?: string } {
-  if (booking.status !== 'PENDING' && booking.status !== 'CONFIRMED') {
-    return { allowed: false, reason: 'Chỉ check-in đơn PENDING hoặc CONFIRMED' };
-  }
-  if (booking.bookingDate !== getTodayIso()) {
-    return { allowed: false, reason: 'Chỉ check-in đơn của ngày hôm nay' };
-  }
-  const now = new Date();
-  const [endH, endM] = booking.endTime.split(':').map(Number);
-  const endMinutes = (endH ?? 0) * 60 + (endM ?? 0);
-  if (now.getHours() * 60 + now.getMinutes() >= endMinutes) {
-    return { allowed: false, reason: 'Đã qua khung giờ, không thể check-in' };
-  }
-  return { allowed: true };
 }
 
 const BADGE_CLASS: Record<string, string> = {

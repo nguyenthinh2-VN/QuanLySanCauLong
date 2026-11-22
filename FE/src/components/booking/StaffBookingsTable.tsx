@@ -1,15 +1,15 @@
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
+  canCheckIn,
   formatBookingCustomerSummary,
   formatCurrencyVnd,
   formatShortDateVi,
   formatTimeShort,
   getBookingStatusMeta,
-  getTodayIso,
   isBookingActionable,
 } from '@/lib/booking';
-import type { BookingResponse, BookingStatus } from '@/types/booking';
+import type { BookingResponse } from '@/types/booking';
 
 export interface StaffBookingsTableProps {
   bookings: BookingResponse[];
@@ -23,26 +23,6 @@ export interface StaffBookingsTableProps {
   onReschedule?: (booking: BookingResponse) => void;
   onCancel?: (booking: BookingResponse) => void;
   isAdmin: boolean;
-}
-
-function canCheckIn(booking: BookingResponse): { allowed: boolean; reason?: string } {
-  const status: BookingStatus = booking.status;
-  if (status !== 'PENDING' && status !== 'CONFIRMED') {
-    return { allowed: false, reason: 'Chỉ check-in đơn PENDING hoặc CONFIRMED' };
-  }
-  const today = getTodayIso();
-  if (booking.bookingDate !== today) {
-    return { allowed: false, reason: 'Chỉ check-in đơn của ngày hôm nay' };
-  }
-  // Check endTime vs current time
-  const now = new Date();
-  const [endH, endM] = booking.endTime.split(':').map(Number);
-  const endMinutes = (endH ?? 0) * 60 + (endM ?? 0);
-  const nowMinutes = now.getHours() * 60 + now.getMinutes();
-  if (nowMinutes >= endMinutes) {
-    return { allowed: false, reason: 'Đã qua khung giờ, không thể check-in' };
-  }
-  return { allowed: true };
 }
 
 const BADGE_CLASS: Record<string, string> = {

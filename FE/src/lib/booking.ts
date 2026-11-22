@@ -131,6 +131,26 @@ export function isBookingActionable(status: BookingStatus): boolean {
   return status === 'PENDING' || status === 'CONFIRMED';
 }
 
+export function canCheckIn(
+  booking: BookingResponse,
+  referenceDate: Date = new Date()
+): { allowed: boolean; reason?: string } {
+  if (booking.status !== 'PENDING' && booking.status !== 'CONFIRMED') {
+    return { allowed: false, reason: 'Chỉ check-in đơn PENDING hoặc CONFIRMED' };
+  }
+  const today = formatLocalDateIso(referenceDate);
+  if (booking.bookingDate !== today) {
+    return { allowed: false, reason: 'Chỉ check-in đơn của ngày hôm nay' };
+  }
+  const [endH, endM] = booking.endTime.split(':').map(Number);
+  const endMinutes = (endH ?? 0) * 60 + (endM ?? 0);
+  const nowMinutes = referenceDate.getHours() * 60 + referenceDate.getMinutes();
+  if (nowMinutes >= endMinutes) {
+    return { allowed: false, reason: 'Đã qua khung giờ, không thể check-in' };
+  }
+  return { allowed: true };
+}
+
 export function extractErrorCode(error: unknown): string | undefined {
   if (axios.isAxiosError<ApiResponse<unknown>>(error)) {
     return error.response?.data?.code;
