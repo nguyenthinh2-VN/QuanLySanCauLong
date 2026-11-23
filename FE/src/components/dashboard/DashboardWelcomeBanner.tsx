@@ -33,8 +33,8 @@ export function DashboardWelcomeBanner({
               .
             </CardDescription>
           </div>
-          <Badge variant="zinc">
-            {primaryRole === 'CUSTOMER' ? 'Dữ liệu trực tuyến' : 'Dữ liệu tĩnh Phase 1'}
+          <Badge variant="zinc" className="border-emerald-300 bg-emerald-50 text-emerald-800">
+            Hệ thống trực tuyến
           </Badge>
         </div>
       </CardHeader>

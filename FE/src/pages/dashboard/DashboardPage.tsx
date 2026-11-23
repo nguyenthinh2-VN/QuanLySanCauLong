@@ -2,7 +2,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { getPrimaryRole } from '@/lib/auth';
 import { DashboardWelcomeBanner } from '@/components/dashboard/DashboardWelcomeBanner';
 import { DashboardStatsGrid } from '@/components/dashboard/DashboardStatsGrid';
-import { DashboardChartPlaceholder } from '@/components/dashboard/DashboardChartPlaceholder';
+import { DashboardOverviewSection } from '@/components/dashboard/DashboardOverviewSection';
 import type { Role } from '@/types/auth';
 
 export function DashboardPage() {
@@ -16,7 +16,7 @@ export function DashboardPage() {
         primaryRole={primaryRole}
       />
       <DashboardStatsGrid primaryRole={primaryRole} />
-      <DashboardChartPlaceholder />
+      <DashboardOverviewSection primaryRole={primaryRole} />
     </div>
   );
 }

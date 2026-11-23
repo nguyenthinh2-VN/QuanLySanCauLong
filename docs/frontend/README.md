@@ -197,7 +197,7 @@ Hệ thống Frontend bao gồm tổng cộng **17 đường dẫn (Routes)**, c
 ### 3.2. Nhóm Ứng dụng Nội bộ theo Vai trò (Protected App Shell Routes — 11 trang)
 | STT | Đường dẫn | Tên hiển thị trên Sidebar | `ADMIN` | `STAFF` | `CUSTOMER` | Trạng thái |
 |:---:|---|---|:---:|:---:|:---:|---|
-| 5 | `/` | Tổng quan (Dashboard) | ✅ | ✅ | *(Redirect `/booking` hoặc xem tổng quan)* | **AppShell + 4 Stat Cards + Panel chờ** |
+| 5 | `/` | Tổng quan (Dashboard) | ✅ | ✅ | *(Redirect `/booking` hoặc xem tổng quan)* | **Hoàn thiện 100% (Nối API thật)** |
 | 6 | `/bookings` | Quản lý đặt sân | ✅ | ✅ | ❌ | **Hoàn thiện 100% (Nối API thật)** |
 | 7 | `/courts` | Quản lý sân & Khung giờ | ✅ | ❌ | ❌ | **Hoàn thiện 100% (Nối API thật)** |
 | 8 | `/users` | Quản lý người dùng | ✅ | ❌ | ❌ | **Hoàn thiện 100% (Nối API thật)** |

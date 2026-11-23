@@ -3,200 +3,225 @@ import {
   DashboardStatCard,
   type StatCardItem,
 } from '@/components/dashboard/DashboardStatCard';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  fetchBookings,
+  fetchMyBookings,
+  getTodayIso,
+} from '@/lib/booking';
+import { getCourts } from '@/lib/court';
+import { getOccupancyReport, getRevenueReport } from '@/lib/report';
+import { getActiveVouchers } from '@/lib/voucher';
 import type { Role } from '@/types/auth';
-import { fetchMyBookings, getTodayIso } from '@/lib/booking';
-
-const STATS_BY_ROLE: Record<Role, StatCardItem[]> = {
-  ADMIN: [
-    {
-      label: 'Doanh thu hôm nay',
-      value: '14.850.000',
-      unit: '₫',
-      subtext: 'Dữ liệu minh họa tĩnh — Phase 1',
-      badgeText: '+12.4%',
-      badgeVariant: 'zinc',
-      accentBarClass: 'bg-zinc-900',
-    },
-    {
-      label: 'Tỷ lệ lấp đầy sân',
-      value: '78.5',
-      unit: '%',
-      subtext: '63 / 80 khung giờ hoạt động',
-      badgeText: 'Cao điểm 17h–21h',
-      badgeVariant: 'sky',
-      accentBarClass: 'bg-amber-500',
-    },
-    {
-      label: 'Tổng lượt đặt sân',
-      value: '42',
-      unit: 'lượt đặt',
-      subtext: '36 hoàn tất · 6 chờ check-in',
-      badgeText: 'Hôm nay',
-      badgeVariant: 'indigo',
-      accentBarClass: 'bg-indigo-500',
-    },
-    {
-      label: 'Sân đang hoạt động',
-      value: '08 / 08',
-      unit: 'sân',
-      subtext: '0 sân đang bảo trì',
-      badgeText: '100% sẵn sàng',
-      badgeVariant: 'amber',
-      accentBarClass: 'bg-amber-500',
-    },
-  ],
-  STAFF: [
-    {
-      label: 'Ca trực hiện tại',
-      value: 'Ca Chiều',
-      subtext: 'Khung giờ 14:00 – 22:00',
-      badgeText: 'Đang mở quầy',
-      badgeVariant: 'zinc',
-      accentBarClass: 'bg-zinc-900',
-    },
-    {
-      label: 'Khách chờ Check-in',
-      value: '06',
-      unit: 'lịch đặt',
-      subtext: 'Trong vòng 60 phút tới',
-      badgeText: 'Cần xác nhận',
-      badgeVariant: 'sky',
-      accentBarClass: 'bg-amber-500',
-    },
-    {
-      label: 'Đơn POS tại quầy',
-      value: '18',
-      unit: 'đơn hàng',
-      subtext: 'Nước uống, cầu lông & phụ kiện',
-      badgeText: 'Trong ca',
-      badgeVariant: 'indigo',
-      accentBarClass: 'bg-indigo-500',
-    },
-    {
-      label: 'Thanh toán chờ xử lý',
-      value: '02',
-      unit: 'giao dịch',
-      subtext: 'Chờ quét QR chuyển khoản',
-      badgeText: 'Ưu tiên',
-      badgeVariant: 'amber',
-      accentBarClass: 'bg-amber-500',
-    },
-  ],
-  CUSTOMER: [
-    {
-      label: 'Lịch đặt sắp tới',
-      value: '--',
-      unit: 'lịch đặt',
-      subtext: 'Đang tải...',
-      badgeText: 'Trực tuyến',
-      badgeVariant: 'zinc',
-      accentBarClass: 'bg-zinc-900',
-    },
-    {
-      label: 'Đã hoàn thành',
-      value: '--',
-      unit: 'lượt đặt',
-      subtext: 'Đang tải...',
-      badgeText: 'Hoàn thành',
-      badgeVariant: 'sky',
-      accentBarClass: 'bg-amber-500',
-    },
-    {
-      label: 'Voucher khả dụng',
-      value: '03',
-      unit: 'mã ưu đãi',
-      subtext: 'Giảm tối đa 50.000 ₫ / lượt đặt',
-      badgeText: 'Sẵn sàng áp dụng',
-      badgeVariant: 'indigo',
-      accentBarClass: 'bg-indigo-500',
-    },
-    {
-      label: 'Khung giờ trống hôm nay',
-      value: '17',
-      unit: 'khung giờ',
-      subtext: 'Cập nhật theo thời gian thực ở Phase sau',
-      badgeText: 'Đặt ngay',
-      badgeVariant: 'amber',
-      accentBarClass: 'bg-amber-500',
-    },
-  ],
-};
 
 export interface DashboardStatsGridProps {
   primaryRole: Role;
 }
 
 export function DashboardStatsGrid({ primaryRole }: DashboardStatsGridProps) {
-  const [customerStats, setCustomerStats] = useState<{
-    upcoming: number | null;
-    completed: number | null;
-  }>({ upcoming: null, completed: null });
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<StatCardItem[]>([]);
 
   useEffect(() => {
-    if (primaryRole !== 'CUSTOMER') return;
+    let active = true;
+    setLoading(true);
 
-    let isMounted = true;
-    const fetchStats = async () => {
+    const loadStats = async () => {
+      const todayStr = getTodayIso();
+
       try {
-        const todayStr = getTodayIso();
-        const [upcomingRes, completedRes] = await Promise.all([
-          fetchMyBookings({ fromDate: todayStr, size: 1 }).catch(() => null),
-          fetchMyBookings({ status: 'COMPLETED', size: 1 }).catch(() => null),
-        ]);
+        if (primaryRole === 'ADMIN') {
+          const [revRes, occRes, bookRes, courtRes] = await Promise.all([
+            getRevenueReport({ from: todayStr, to: todayStr }).catch(() => null),
+            getOccupancyReport({ from: todayStr, to: todayStr }).catch(() => null),
+            fetchBookings({ bookingDate: todayStr, size: 1 }).catch(() => null),
+            getCourts({ size: 100 }).catch(() => null),
+          ]);
 
-        if (isMounted) {
-          setCustomerStats({
-            upcoming: upcomingRes?.totalElements ?? 0,
-            completed: completedRes?.totalElements ?? 0,
-          });
+          if (!active) return;
+
+          const netRevenue = revRes?.totals?.netRevenue ?? 0;
+          const txCount = revRes?.totals?.transactionCount ?? 0;
+          const occRate = occRes?.overallRate ?? 0;
+          const bookedSlots = occRes?.bookedSlots ?? 0;
+          const totalSlots = occRes?.totalSlots ?? 0;
+          const totalBookings = bookRes?.totalElements ?? 0;
+          const courtList = courtRes?.items ?? [];
+          const totalCourts = courtList.length;
+          const activeCourts = courtList.filter((c) => c.status === 'AVAILABLE').length;
+
+          setStats([
+            {
+              label: 'Doanh thu hôm nay',
+              value: new Intl.NumberFormat('vi-VN').format(netRevenue),
+              unit: '₫',
+              subtext: `${txCount} giao dịch thành công`,
+              badgeText: 'Hôm nay',
+              badgeVariant: 'zinc',
+              accentBarClass: 'bg-zinc-900',
+            },
+            {
+              label: 'Tỷ lệ lấp đầy sân',
+              value: occRate.toFixed(1),
+              unit: '%',
+              subtext: `${bookedSlots} / ${totalSlots} khung giờ hoạt động`,
+              badgeText: 'Công suất',
+              badgeVariant: 'sky',
+              accentBarClass: 'bg-amber-500',
+            },
+            {
+              label: 'Tổng lượt đặt sân',
+              value: String(totalBookings),
+              unit: 'lượt đặt',
+              subtext: 'Lịch đặt trong ngày hôm nay',
+              badgeText: 'Hôm nay',
+              badgeVariant: 'indigo',
+              accentBarClass: 'bg-indigo-500',
+            },
+            {
+              label: 'Sân đang hoạt động',
+              value: `${String(activeCourts).padStart(2, '0')} / ${String(totalCourts).padStart(2, '0')}`,
+              unit: 'sân',
+              subtext: `${totalCourts - activeCourts} sân đang bảo trì`,
+              badgeText: activeCourts === totalCourts && totalCourts > 0 ? '100% sẵn sàng' : 'Khả dụng',
+              badgeVariant: 'amber',
+              accentBarClass: 'bg-amber-500',
+            },
+          ]);
+        } else if (primaryRole === 'STAFF') {
+          const [bookRes, confRes, inRes, courtRes] = await Promise.all([
+            fetchBookings({ bookingDate: todayStr, size: 1 }).catch(() => null),
+            fetchBookings({ bookingDate: todayStr, status: 'CONFIRMED', size: 1 }).catch(() => null),
+            fetchBookings({ bookingDate: todayStr, status: 'CHECKED_IN', size: 1 }).catch(() => null),
+            getCourts({ size: 100 }).catch(() => null),
+          ]);
+
+          if (!active) return;
+
+          const totalBookings = bookRes?.totalElements ?? 0;
+          const confirmedCount = confRes?.totalElements ?? 0;
+          const checkedInCount = inRes?.totalElements ?? 0;
+          const courtList = courtRes?.items ?? [];
+          const totalCourts = courtList.length;
+          const activeCourts = courtList.filter((c) => c.status === 'AVAILABLE').length;
+
+          setStats([
+            {
+              label: 'Tổng lượt đặt hôm nay',
+              value: String(totalBookings),
+              unit: 'lịch đặt',
+              subtext: 'Toàn bộ đơn trong ngày hôm nay',
+              badgeText: 'Hôm nay',
+              badgeVariant: 'zinc',
+              accentBarClass: 'bg-zinc-900',
+            },
+            {
+              label: 'Khách chờ Check-in',
+              value: String(confirmedCount).padStart(2, '0'),
+              unit: 'đơn',
+              subtext: 'Đã xác nhận & chờ nhận sân',
+              badgeText: 'Cần đón khách',
+              badgeVariant: 'sky',
+              accentBarClass: 'bg-amber-500',
+            },
+            {
+              label: 'Đang sử dụng sân',
+              value: String(checkedInCount).padStart(2, '0'),
+              unit: 'đơn',
+              subtext: 'Khách đang chơi trên sân',
+              badgeText: 'Đang chơi',
+              badgeVariant: 'indigo',
+              accentBarClass: 'bg-indigo-500',
+            },
+            {
+              label: 'Sân đang hoạt động',
+              value: `${String(activeCourts).padStart(2, '0')} / ${String(totalCourts).padStart(2, '0')}`,
+              unit: 'sân',
+              subtext: `${totalCourts - activeCourts} sân đang bảo trì`,
+              badgeText: 'Khả dụng',
+              badgeVariant: 'amber',
+              accentBarClass: 'bg-amber-500',
+            },
+          ]);
+        } else {
+          // CUSTOMER
+          const [upcomingRes, completedRes, voucherRes] = await Promise.all([
+            fetchMyBookings({ fromDate: todayStr, size: 1 }).catch(() => null),
+            fetchMyBookings({ status: 'COMPLETED', size: 1 }).catch(() => null),
+            getActiveVouchers({ size: 1 }).catch(() => null),
+          ]);
+
+          if (!active) return;
+
+          const upcomingCount = upcomingRes?.totalElements ?? 0;
+          const completedCount = completedRes?.totalElements ?? 0;
+          const voucherCount = voucherRes?.totalElements ?? 0;
+
+          setStats([
+            {
+              label: 'Lịch đặt sắp tới',
+              value: String(upcomingCount).padStart(2, '0'),
+              unit: 'lịch đặt',
+              subtext: 'Từ hôm nay trở đi',
+              badgeText: 'Trực tuyến',
+              badgeVariant: 'zinc',
+              accentBarClass: 'bg-zinc-900',
+            },
+            {
+              label: 'Đã hoàn thành',
+              value: String(completedCount).padStart(2, '0'),
+              unit: 'lượt đặt',
+              subtext: 'Tổng số lịch đặt đã hoàn tất',
+              badgeText: 'Hoàn thành',
+              badgeVariant: 'sky',
+              accentBarClass: 'bg-amber-500',
+            },
+            {
+              label: 'Voucher khả dụng',
+              value: String(voucherCount).padStart(2, '0'),
+              unit: 'mã ưu đãi',
+              subtext: 'Sẵn sàng áp dụng cho đơn mới',
+              badgeText: 'Ưu đãi',
+              badgeVariant: 'indigo',
+              accentBarClass: 'bg-indigo-500',
+            },
+            {
+              label: 'Đặt sân trực tuyến',
+              value: 'Đặt ngay',
+              subtext: 'Lưới giờ cập nhật theo thời gian thực',
+              badgeText: 'Mở 24/7',
+              badgeVariant: 'amber',
+              accentBarClass: 'bg-amber-500',
+            },
+          ]);
         }
       } catch {
-        if (isMounted) {
-          setCustomerStats({ upcoming: 0, completed: 0 });
-        }
+        if (active) setStats([]);
+      } finally {
+        if (active) setLoading(false);
       }
     };
 
-    fetchStats();
+    void loadStats();
+
     return () => {
-      isMounted = false;
+      active = false;
     };
   }, [primaryRole]);
 
-  let statCards = STATS_BY_ROLE[primaryRole];
-
-  if (primaryRole === 'CUSTOMER') {
-    statCards = [
-      {
-        ...statCards[0],
-        value:
-          customerStats.upcoming !== null
-            ? String(customerStats.upcoming).padStart(2, '0')
-            : '--',
-        subtext:
-          customerStats.upcoming !== null
-            ? 'Từ hôm nay trở đi'
-            : 'Đang tải số liệu...',
-      },
-      {
-        ...statCards[1],
-        value:
-          customerStats.completed !== null
-            ? String(customerStats.completed).padStart(2, '0')
-            : '--',
-        subtext:
-          customerStats.completed !== null
-            ? 'Tổng số lịch đặt đã hoàn tất'
-            : 'Đang tải số liệu...',
-      },
-      statCards[2],
-      statCards[3],
-    ];
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-32 w-full rounded-xl" />
+        ))}
+      </div>
+    );
   }
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      {statCards.map((stat) => (
+      {stats.map((stat) => (
         <DashboardStatCard key={stat.label} stat={stat} />
       ))}
     </div>
