@@ -34,6 +34,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
@@ -142,7 +143,7 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public BookingResponse createBooking(CreateBookingRequest request) {
         Long currentUserId = SecurityUtils.getCurrentUserId()
                 .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
@@ -398,7 +399,7 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public BookingResponse createPosBooking(CreatePosBookingRequest request) {
         boolean hasUserId = request.getUserId() != null;
         boolean hasGuestName = StringUtils.hasText(request.getGuestName());
@@ -504,7 +505,7 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public RecurringBookingResponse createRecurringBooking(CreateRecurringBookingRequest request) {
         Long currentUserId = SecurityUtils.getCurrentUserId()
                 .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
