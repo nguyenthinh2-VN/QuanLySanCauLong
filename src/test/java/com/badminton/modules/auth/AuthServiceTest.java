@@ -33,6 +33,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -294,5 +295,88 @@ class AuthServiceTest {
                 assertThatThrownBy(() -> authService.register(request))
                                 .isInstanceOf(AppException.class)
                                 .hasMessage(ErrorCode.EMAIL_ALREADY_EXISTS.getMessage());
+        }
+
+        @Test
+        @DisplayName("Đăng nhập thất bại khi tài khoản bị khóa")
+        void login_ThrowsAppException_WhenUserIsLocked() {
+                LoginRequest request = LoginRequest.builder()
+                                .email("locked@example.com")
+                                .password("Password@123")
+                                .build();
+
+                User lockedUser = User.builder()
+                                .email("locked@example.com")
+                                .password("encodedPassword")
+                                .active(false)
+                                .roles(Set.of())
+                                .build();
+                lockedUser.setId(2L);
+
+                CustomUserDetails userDetails = new CustomUserDetails(lockedUser);
+                Authentication authentication = new UsernamePasswordAuthenticationToken(userDetails, null,
+                                userDetails.getAuthorities());
+
+                when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+                                .thenReturn(authentication);
+
+                assertThatThrownBy(() -> authService.login(request))
+                                .isInstanceOf(AppException.class)
+                                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.USER_LOCKED);
+        }
+
+        @Test
+        @DisplayName("Refresh token thất bại và thu hồi token khi tài khoản bị khóa")
+        void refreshToken_ThrowsAppException_WhenUserIsLocked() {
+                String tokenStr = "locked-user-refresh-token";
+                RefreshTokenRequest request = RefreshTokenRequest.builder()
+                                .refreshToken(tokenStr)
+                                .build();
+
+                User lockedUser = User.builder()
+                                .email("locked@example.com")
+                                .active(false)
+                                .roles(Set.of())
+                                .build();
+                lockedUser.setId(2L);
+
+                RefreshToken existingToken = RefreshToken.builder()
+                                .token(tokenStr)
+                                .user(lockedUser)
+                                .expiryDate(Instant.now().plusSeconds(3600))
+                                .revoked(false)
+                                .build();
+
+                when(refreshTokenRepository.findByToken(tokenStr)).thenReturn(Optional.of(existingToken));
+
+                assertThatThrownBy(() -> authService.refreshToken(request))
+                                .isInstanceOf(AppException.class)
+                                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.USER_LOCKED);
+
+                assertThat(existingToken.isRevoked()).isTrue();
+                verify(refreshTokenRepository).save(existingToken);
+        }
+
+        @Test
+        @DisplayName("getCurrentUser thất bại khi tài khoản bị khóa")
+        void getCurrentUser_ThrowsAppException_WhenUserIsLocked() {
+                User lockedUser = User.builder()
+                                .email("locked@example.com")
+                                .active(false)
+                                .build();
+                lockedUser.setId(2L);
+                CustomUserDetails userDetails = new CustomUserDetails(lockedUser);
+                Authentication authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+
+                when(userRepository.findById(2L)).thenReturn(Optional.of(lockedUser));
+
+                try {
+                        assertThatThrownBy(() -> authService.getCurrentUser())
+                                        .isInstanceOf(AppException.class)
+                                        .hasFieldOrPropertyWithValue("errorCode", ErrorCode.USER_LOCKED);
+                } finally {
+                        SecurityContextHolder.clearContext();
+                }
         }
 }

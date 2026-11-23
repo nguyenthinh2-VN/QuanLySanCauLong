@@ -253,6 +253,31 @@ class BookingServiceTest {
     }
 
     @Test
+    @DisplayName("Đặt sân thất bại khi tài khoản người dùng bị khóa (USER_LOCKED)")
+    void createBooking_userLocked_throwsUserLocked() {
+        User lockedUser = User.builder()
+                .email("locked@example.com")
+                .active(false)
+                .build();
+        lockedUser.setId(100L);
+
+        CreateBookingRequest request = CreateBookingRequest.builder()
+                .courtId(10L)
+                .bookingDate(validDate)
+                .timeSlotId(20L)
+                .build();
+
+        when(userRepository.findById(100L)).thenReturn(Optional.of(lockedUser));
+
+        assertThatThrownBy(() -> bookingService.createBooking(request))
+                .isInstanceOf(AppException.class)
+                .satisfies(ex -> assertThat(((AppException) ex).getErrorCode()).isEqualTo(ErrorCode.USER_LOCKED));
+
+        verify(courtRepository, never()).findByIdForUpdate(any());
+        verify(bookingRepository, never()).save(any(Booking.class));
+    }
+
+    @Test
     @DisplayName("Xem lịch sử đặt sân của tôi thành công")
     void getMyBookings_success() {
         Booking booking = Booking.builder()

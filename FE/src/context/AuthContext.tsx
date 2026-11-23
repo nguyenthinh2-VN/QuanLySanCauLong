@@ -55,17 +55,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const response = await api.get<ApiResponse<RawUser>>('/auth/me');
       if (response.data.success && response.data.data) {
         const normalized = normalizeUser(response.data.data);
+        if (!normalized.active) {
+          clearAuthStorage();
+          setUser(null);
+          return null;
+        }
         setStoredUser(normalized);
         setUser(normalized);
         return normalized;
       }
       throw new Error(response.data.message || 'Không lấy được thông tin tài khoản');
     } catch {
-      const fallbackUser = getStoredUser();
-      if (fallbackUser && getAccessToken()) {
-        setUser(fallbackUser);
-        return fallbackUser;
-      }
       clearAuthStorage();
       setUser(null);
       return null;
@@ -107,14 +107,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (rawUser) {
         const normalized = normalizeUser(rawUser);
+        if (!normalized.active) {
+          clearAuthStorage();
+          setUser(null);
+          throw new Error('Tài khoản của bạn đã bị khóa hoặc ngừng hoạt động');
+        }
         setStoredUser(normalized, rememberMe);
         setUser(normalized);
         return normalized;
       }
 
       const fetched = await refreshUser();
-      if (!fetched) {
-        throw new Error('Không thể tải thông tin người dùng sau khi đăng nhập');
+      if (!fetched || !fetched.active) {
+        throw new Error('Tài khoản của bạn đã bị khóa hoặc không thể tải thông tin');
       }
       return fetched;
     },

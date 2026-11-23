@@ -118,6 +118,10 @@ public class AuthServiceImpl implements AuthService {
         CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
         User user = userDetails.getUser();
 
+        if (!user.isActive()) {
+            throw new AppException(ErrorCode.USER_LOCKED);
+        }
+
         String accessToken = jwtTokenProvider.generateAccessToken(userDetails);
         RefreshToken refreshToken = createRefreshToken(user);
 
@@ -145,6 +149,12 @@ public class AuthServiceImpl implements AuthService {
         }
 
         User user = oldRefreshToken.getUser();
+
+        if (!user.isActive()) {
+            oldRefreshToken.setRevoked(true);
+            refreshTokenRepository.save(oldRefreshToken);
+            throw new AppException(ErrorCode.USER_LOCKED);
+        }
 
         // Token rotation: Thu hồi token cũ và sinh token mới
         oldRefreshToken.setRevoked(true);
@@ -245,6 +255,10 @@ public class AuthServiceImpl implements AuthService {
 
         User user = userRepository.findById(userDetails.getId())
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        if (!user.isActive()) {
+            throw new AppException(ErrorCode.USER_LOCKED);
+        }
 
         return userMapper.toUserResponse(user);
     }

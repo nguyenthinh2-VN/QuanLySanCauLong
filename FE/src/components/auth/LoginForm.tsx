@@ -10,6 +10,7 @@ import { PasswordField } from '@/components/auth/PasswordField';
 
 export interface LoginFormProps {
   initialSuccessMessage?: string | null;
+  initialErrorMessage?: string | null;
   onLoginSubmit: (
     email: string,
     password: string,
@@ -20,6 +21,7 @@ export interface LoginFormProps {
 
 export function LoginForm({
   initialSuccessMessage = null,
+  initialErrorMessage = null,
   onLoginSubmit,
   extractError,
 }: LoginFormProps) {
@@ -27,7 +29,15 @@ export function LoginForm({
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(
+    () => initialErrorMessage ?? null
+  );
+
+  React.useEffect(() => {
+    if (initialErrorMessage) {
+      setErrorMessage(initialErrorMessage);
+    }
+  }, [initialErrorMessage]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();

@@ -40,7 +40,7 @@ export function ProtectedRoute({ children }: { children?: React.ReactNode }) {
     return <AuthLoadingScreen />;
   }
 
-  if (!user) {
+  if (!user || user.active === false) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
@@ -60,7 +60,7 @@ export function RoleRoute({ allowed, children }: RoleRouteProps) {
     return <AuthLoadingScreen />;
   }
 
-  if (!user) {
+  if (!user || user.active === false) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 

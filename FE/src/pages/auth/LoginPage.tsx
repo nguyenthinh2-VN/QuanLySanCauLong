@@ -17,7 +17,13 @@ export function LoginPage() {
   const location = useLocation();
   const state = location.state as LocationState | null;
 
-  if (user) {
+  const searchParams = new URLSearchParams(location.search);
+  const isLockedParam = searchParams.get('error') === 'USER_LOCKED';
+  const initialErrorMessage = isLockedParam
+    ? 'Tài khoản của bạn đã bị khóa hoặc ngừng hoạt động. Vui lòng liên hệ Quản trị viên để được hỗ trợ.'
+    : null;
+
+  if (user && user.active !== false) {
     const redirectTarget = state?.from?.pathname || '/';
     return <Navigate to={redirectTarget} replace />;
   }
@@ -50,6 +56,7 @@ export function LoginPage() {
     >
       <LoginForm
         initialSuccessMessage={state?.registeredMessage ?? null}
+        initialErrorMessage={initialErrorMessage}
         onLoginSubmit={handleLogin}
         extractError={(err) =>
           extractErrorMessage(err, 'Email hoặc mật khẩu không chính xác')

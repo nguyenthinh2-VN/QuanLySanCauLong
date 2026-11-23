@@ -74,7 +74,12 @@ export async function performTokenRefresh(): Promise<string> {
 
   setTokens(payload.accessToken, payload.refreshToken);
   if (payload.user) {
-    setStoredUser(normalizeUser(payload.user));
+    const normalized = normalizeUser(payload.user);
+    if (!normalized.active) {
+      clearAuthStorage();
+      throw new Error('Tài khoản của bạn đã bị khóa hoặc ngừng hoạt động');
+    }
+    setStoredUser(normalized);
   }
 
   return payload.accessToken;
@@ -95,8 +100,22 @@ export async function refreshAccessToken(): Promise<string> {
 
 api.interceptors.response.use(
   (response) => response,
-  async (error: AxiosError) => {
+  async (error: AxiosError<ApiResponse<unknown>>) => {
     const originalRequest = error.config as RetryableRequestConfig | undefined;
+    const responseData = error.response?.data;
+    const isLocked =
+      error.response?.status === 403 &&
+      (responseData?.code === 'USER_LOCKED' ||
+        (typeof responseData?.message === 'string' &&
+          responseData.message.toLowerCase().includes('khóa')));
+
+    if (isLocked) {
+      clearAuthStorage();
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login?error=USER_LOCKED';
+      }
+      return Promise.reject(error);
+    }
 
     if (
       error.response?.status === 401 &&
@@ -110,10 +129,18 @@ api.interceptors.response.use(
         const newAccessToken = await refreshAccessToken();
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         return api(originalRequest);
-      } catch (refreshError) {
+      } catch (refreshError: unknown) {
         clearAuthStorage();
+        let isRefreshLocked = false;
+        if (axios.isAxiosError<ApiResponse<unknown>>(refreshError)) {
+          isRefreshLocked =
+            refreshError.response?.status === 403 ||
+            refreshError.response?.data?.code === 'USER_LOCKED';
+        }
         if (window.location.pathname !== '/login') {
-          window.location.href = '/login';
+          window.location.href = isRefreshLocked
+            ? '/login?error=USER_LOCKED'
+            : '/login';
         }
         return Promise.reject(refreshError);
       }

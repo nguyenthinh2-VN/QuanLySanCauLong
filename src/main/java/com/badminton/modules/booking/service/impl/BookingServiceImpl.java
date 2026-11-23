@@ -150,6 +150,10 @@ public class BookingServiceImpl implements BookingService {
         User user = userRepository.findById(currentUserId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
+        if (!user.isActive()) {
+            throw new AppException(ErrorCode.USER_LOCKED);
+        }
+
         LocalDate today = LocalDate.now();
         LocalDate maxDate = today.plusDays(MAX_BOOKING_DAYS_AHEAD);
         if (request.getBookingDate() == null || request.getBookingDate().isBefore(today)
@@ -416,6 +420,9 @@ public class BookingServiceImpl implements BookingService {
         if (hasUserId) {
             user = userRepository.findById(request.getUserId())
                     .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+            if (!user.isActive()) {
+                throw new AppException(ErrorCode.USER_LOCKED);
+            }
         }
 
         LocalDate today = LocalDate.now();
@@ -511,6 +518,10 @@ public class BookingServiceImpl implements BookingService {
                 .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
         User user = userRepository.findById(currentUserId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        if (!user.isActive()) {
+            throw new AppException(ErrorCode.USER_LOCKED);
+        }
 
         LocalDate today = LocalDate.now();
         LocalDate maxStartDate = today.plusDays(MAX_BOOKING_DAYS_AHEAD);
